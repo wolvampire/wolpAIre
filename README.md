@@ -1,2 +1,2 @@
 # wolpAIre
-School Project - IA for a strategy game between Wolves and Vampires
+School Project - IA for a strategy game between Werewolves and Vampires
