@@ -1,12 +1,12 @@
+from game_client import *
 import socket
 import struct
 
 
 
-
-
 class ServerCon():
-    def __init__(self):
+    def __init__(self, game_engine):
+        self.__game_engine = game_engine
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.address = None
         self.port = None
@@ -26,6 +26,13 @@ class ServerCon():
         while len(commande)<3:
             commande += self.socket.recv(3-len(commande))
         return commande.decode()
+
+    def send_nme(self, ):
+        
+
+    def send_mov(self, ):
+        
+
 
 
 if __name__ == '__main__':
