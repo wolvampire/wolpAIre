@@ -5,8 +5,8 @@ import struct
 
 
 class ServerCon():
-    def __init__(self, game_engine):
-        self.__game_engine = game_engine
+    def __init__(self, game_client):
+        self.__game_client = game_client
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.address = None
         self.port = None
@@ -27,6 +27,7 @@ class ServerCon():
             commande += self.socket.recv(3-len(commande))
         return commande.decode()
 
+    """ Methodes called by the game client, to send to server """
     def send_nme(self, ):
         
 

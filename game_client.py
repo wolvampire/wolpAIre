@@ -7,9 +7,10 @@ class GameClient():
         self.__board = [[]]
         self.__connection = ServerCon(self)
 
+    """ Start everything, including connection """
     def start(self, ):
         
-
+    """ All callbacks from the server, receiving formated input """
     def callback_set(self, n, m):
         
 
