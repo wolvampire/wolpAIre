@@ -1,0 +1,205 @@
+from random import random
+from random import randint
+from client import GameClient
+from time import time
+from world_rep import get_all_paths, get_potential_targets, get_tiles_of_interest
+import sys
+import os 
+
+sys.path.append(os.path.dirname(os.path.join(os.path.realpath(__file__),"../")))  
+from board_tile import board_tile
+
+
+class GameServer():
+    def __init__(self, p1, p2):
+        self.__board = [[]]
+        self.__n = 0
+        self.__m = 0
+        self.p1 = p1
+        self.p2 = p2
+        self.nb_games = 0
+        self.nb_tours = 0
+        
+    def get_board(self):
+        return self.__board
+    
+    def new_game(self, P_hum=0.05):
+        self.nb_games += 1
+        self.nb_tours = 0
+        
+        print("New game ! (#{})".format(self.nb_games))
+        self.__n = 10
+        self.__m = 15
+        self.__board = [[board_tile(x,y,randint(1,10),"HUM") if random()<P_hum else board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
+       
+        self.__board[1][1]=board_tile(1,1,10,"WERE")
+        self.__board[self.__n-2][self.__m-2]=board_tile(self.__n-2,self.__m-2,10,"VAMP")
+        self.p1.new_game("VAMP", self.__n, self.__m)
+        self.p2.new_game("WERE", self.__n, self.__m)
+        
+        
+    def print_board(self):
+        print("\t",end="")
+        for j in range(self.__m):
+            print("{}\t".format(j),end="")
+        print()
+        for i in range(self.__n):
+            print("{}\t".format(i),end="")
+            for j in range(self.__m):
+                print(self.__board[i][j],end="")
+                print("\t",end="")
+            print("\n")
+    
+
+    def update(self, nb):
+        self.nb_tours += 1
+        
+        p = self.p1 if nb==1 else self.p2
+        p_enemy = self.p2 if nb==1 else self.p1
+            
+        p_nb = sum([board_tile.nb for row in self.__board for board_tile in row if board_tile.faction == p.faction])
+        p_enemy_nb = sum([board_tile.nb for row in self.__board for board_tile in row if board_tile.faction == p_enemy.faction])
+        if p_nb == 0:
+            p_enemy.score+=1
+            self.new_game()
+        elif self.nb_tours > 100:
+            if p_nb > p_enemy_nb:
+                p.score += 1
+            elif p_nb < p_enemy_nb:
+                p_enemy.score += 1
+            self.new_game()
+            
+        else:
+            moves = p.decide(self.__board)
+            faction = p.faction
+            enemy = "VAMP" if faction == "WERE" else "WERE"
+            for (x,y,nb,xd,yd) in moves:
+                if self.__board[x][y].faction == faction and nb <= self.__board[x][y].nb and xd>=x-1 and xd <=x+1 and yd>=y-1 and yd<=y+1 and xd>=0 and xd<self.__n and yd>=0 and yd<self.__m:
+                        # print("{} {} from ({},{}) to ({},{})".format(nb, faction,x,y,xd,yd))
+                        self.__board[x][y].nb -= nb
+                        if self.__board[x][y].nb == 0:
+                            self.__board[x][y].faction = "EMPT"
+                        result, winner = nb, faction
+                        if self.__board[xd][yd].faction == "HUM":
+                            result, winner = self.fight_hums(faction, nb, self.__board[xd][yd].nb)
+                        elif self.__board[xd][yd].faction == enemy:
+                            result, winner = self.fight(faction, enemy, nb, self.__board[xd][yd].nb)
+                        elif self.__board[xd][yd].faction == faction:
+                            result += self.__board[xd][yd].nb
+                        
+                        self.__board[xd][yd].nb = result
+                        if result != 0:
+                            self.__board[xd][yd].faction = winner  
+                        else:
+                            self.__board[xd][yd].faction = "EMPT"  
+                else:
+                    print("invalid move : {} {} from ({},{}) to ({},{}). Ignoring.".format(nb, faction,x,y,xd,yd))
+    
+    def fight_hums(self, faction_att, nb_att, nb_def):
+        if nb_att > nb_def:
+            return nb_att + nb_def, faction_att
+        p = nb_att/(2*nb_def)
+        win = random()<p
+        if win:
+            survivors = 0
+            for i in range(nb_att):
+                survive = random()<p
+                if survive:
+                    survivors+=1
+            for i in range(nb_def):
+                turn = random()<p
+                if turn:
+                    survivors+=1
+            return survivors, faction_att
+        else:
+            survivors = 0
+            for i in range(nb_def):
+                survive = random()<(1-p)
+                if survive:
+                    survivors+=1
+            return survivors, "HUM"
+            
+            
+    def fight(self, faction_att, faction_def, nb_att, nb_def):
+        p = min(1,max(nb_att/(2*nb_def), nb_att/nb_def-0.5))  # rules in the pdf
+        win = random()<p
+        if win:
+            survivors = 0
+            for i in range(nb_att):
+                survive = random()<p
+                if survive:
+                    survivors+=1
+            return survivors, faction_att
+        else:
+            survivors = 0
+            for i in range(nb_def):
+                survive = random()<(1-p)
+                if survive:
+                    survivors+=1
+            return survivors, faction_def
+            
+    
+if __name__ == "__main__":
+
+    nb_games = int(sys.argv[1]) if len(sys.argv)>1 else 100
+
+    
+    p1 = GameClient("greed")
+    p2 = GameClient("random")
+    g = GameServer(p1,p2)
+    g.new_game()
+    g.print_board()
+    
+    s = time()
+    
+    while(g.nb_games < nb_games):
+        g.update(1)
+        g.update(2)
+        if time()-s >= 1:
+            # g.print_board()
+            s = time()
+    print("{} ({}) {} - {} {} ({})".format(p1.faction, p1.strat, p1.score, p2.score, p2.faction, p2.strat))
+    
+    
+    playing = True
+    while playing:
+        g.update(1)
+        tiles_of_interest = get_tiles_of_interest(g.get_board())
+        p1_source = tiles_of_interest[p1.faction][0]
+        p2_tiles = tiles_of_interest[p2.faction]
+        p1_potential_targets = get_potential_targets(p1_source, p2_tiles, tiles_of_interest["HUM"])
+        p1_all_paths = get_all_paths(p1_source, p2_tiles, p1_potential_targets, current_path=[], time_spent=0)
+        print("potential targets for P1 ({})".format(p1.faction))
+        for tile in p1_potential_targets:
+            print("({},{} - {})->({},{} - {})".format(p1_source.x, p1_source.y, p1_source, tile.x, tile.y, tile))
+        
+        print("potential paths for P1 ({})".format(p1.faction))
+        
+        for path in p1_all_paths:
+            print("({},{} - {})".format(p1_source.x, p1_source.y, p1_source),end="")
+            for tile in path:
+                print("->({},{} - {})".format(tile.x, tile.y, tile),end="")
+            print()    
+            
+        g.print_board()
+        a = input()
+        playing = (a != "q")
+        
+        g.update(2)
+        g.print_board()
+        a = input()
+        playing = (a != "q")
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
