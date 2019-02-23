@@ -145,7 +145,7 @@ if __name__ == "__main__":
 
     
     p1 = GameClient("greed")
-    p2 = GameClient("random")
+    p2 = GameClient("always_attack")
     g = GameServer(p1,p2)
     g.new_game()
     g.print_board()
