@@ -2,11 +2,9 @@ from random import random
 from random import randint
 from client import GameClient
 from time import time
-from world_rep import get_all_paths, get_potential_targets, get_tiles_of_interest
 import sys
 import os 
 
-sys.path.append(os.path.dirname(os.path.join(os.path.realpath(__file__),"../")))  
 from board_tile import board_tile
 
 
@@ -37,6 +35,37 @@ class GameServer():
         self.p1.new_game("VAMP", self.__n, self.__m)
         self.p2.new_game("WERE", self.__n, self.__m)
         
+    def game_report(self):
+        if self.p1.max_time > 2 or self.p2.max_time > 2:
+            
+            print("Length of game : {} turns".format(self.nb_tours))
+            print("Max decision time for p1 ({}) : {:.2f}s".format(self.p1.faction, self.p1.max_time))
+            print("Max decision time for p2 ({}) : {:.2f}s".format(self.p2.faction, self.p2.max_time))
+    
+    
+    def load_game(self):
+        self.nb_games += 1
+        self.nb_tours = 0
+        
+        print("New loaded game ! (#{})".format(self.nb_games))
+        self.__n = 10
+        self.__m = 15
+        self.__board = [[board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
+       
+        self.__board[1][2]=board_tile(1,2,24,"WERE")
+        self.__board[0][8]=board_tile(0,8,9,"HUM")
+        self.__board[0][14]=board_tile(0,14,10,"HUM")
+        self.__board[5][4]=board_tile(5,4,6,"HUM")
+        self.__board[7][5]=board_tile(7,5,3,"HUM")
+        self.__board[7][6]=board_tile(7,6,3,"HUM")
+        self.__board[8][8]=board_tile(8,8,4,"HUM")
+        self.__board[8][11]=board_tile(8,11,17,"VAMP")
+        
+        self.p1.new_game("WERE", self.__n, self.__m)
+        self.p2.new_game("VAMP", self.__n, self.__m)
+        
+        
+        
         
     def print_board(self):
         print("\t",end="")
@@ -61,12 +90,18 @@ class GameServer():
         p_enemy_nb = sum([board_tile.nb for row in self.__board for board_tile in row if board_tile.faction == p_enemy.faction])
         if p_nb == 0:
             p_enemy.score+=1
+            self.game_report()
             self.new_game()
+        elif p_enemy_nb == 0:
+            p.score+=1
+            self.game_report()
+            self.new_game() 
         elif self.nb_tours > 100:
             if p_nb > p_enemy_nb:
                 p.score += 1
             elif p_nb < p_enemy_nb:
                 p_enemy.score += 1
+            self.game_report()
             self.new_game()
             
         else:
@@ -144,9 +179,10 @@ if __name__ == "__main__":
     nb_games = int(sys.argv[1]) if len(sys.argv)>1 else 100
 
     
-    p1 = GameClient("greed")
-    p2 = GameClient("random")
+    p1 = GameClient("roxxor")
+    p2 = GameClient("greed")
     g = GameServer(p1,p2)
+    # g.load_game()
     g.new_game()
     g.print_board()
     
@@ -154,6 +190,7 @@ if __name__ == "__main__":
     
     while(g.nb_games < nb_games):
         g.update(1)
+        
         g.update(2)
         if time()-s >= 1:
             # g.print_board()
@@ -162,24 +199,10 @@ if __name__ == "__main__":
     
     
     playing = True
+    a = input()
+    
     while playing:
         g.update(1)
-        tiles_of_interest = get_tiles_of_interest(g.get_board())
-        p1_source = tiles_of_interest[p1.faction][0]
-        p2_tiles = tiles_of_interest[p2.faction]
-        p1_potential_targets = get_potential_targets(p1_source, p2_tiles, tiles_of_interest["HUM"])
-        p1_all_paths = get_all_paths(p1_source, p2_tiles, p1_potential_targets, current_path=[], time_spent=0)
-        print("potential targets for P1 ({})".format(p1.faction))
-        for tile in p1_potential_targets:
-            print("({},{} - {})->({},{} - {})".format(p1_source.x, p1_source.y, p1_source, tile.x, tile.y, tile))
-        
-        print("potential paths for P1 ({})".format(p1.faction))
-        
-        for path in p1_all_paths:
-            print("({},{} - {})".format(p1_source.x, p1_source.y, p1_source),end="")
-            for tile in path:
-                print("->({},{} - {})".format(tile.x, tile.y, tile),end="")
-            print()    
             
         g.print_board()
         a = input()
