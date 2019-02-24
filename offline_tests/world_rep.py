@@ -38,7 +38,7 @@ def get_potential_targets(source_tile, enemy_tiles, human_tiles, delay=0):
     """
     return [target for target in human_tiles if get_crit_time(target, enemy_tiles)>=dist(source_tile, target)+delay]
     
-get
+
     
 def get_all_paths(source_tile, enemy_tiles, target_tiles, current_path=None, time_spent=0):
     """
