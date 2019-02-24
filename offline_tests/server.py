@@ -178,9 +178,8 @@ if __name__ == "__main__":
 
     nb_games = int(sys.argv[1]) if len(sys.argv)>1 else 100
 
-    
-    p1 = GameClient("roxxor")
-    p2 = GameClient("greed")
+    p1 = GameClient("greed")
+    p2 = GameClient("always_attack")
     g = GameServer(p1,p2)
     # g.load_game()
     g.new_game()
