@@ -1,4 +1,4 @@
-from enum import enum
+from enum import Enum
 
 class Faction(Enum):
     EMPT = 0
