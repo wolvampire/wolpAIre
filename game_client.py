@@ -26,28 +26,24 @@ class GameClient():
         self.__board = [[board_tile(x,y) for y in range(m)] for x in range(n)]
         return True
 
-    def callback_hum(self, nHouses, housesCoordinates):
-        if nHouses == len(housesCoordinates):
-            for (x,y) in housesCoordinates:
-                self.__board[x][y] = board_tile(x,y,faction=Faction.HUM)
-        else:
-            return False
+    def callback_hum(self, housesCoordinates):
+        for (x,y) in housesCoordinates:
+            self.__board[x][y] = board_tile(x,y,faction=Faction.HUM)
         return True
 
     def callback_hme(self, x, y):
         self.__startingHome = [x,y]
-        self.__us = self.__board[x][y].faction
         return True
 
-    def callback_upd(self, nChanges, changesInfosList):
-        update_success =  update_map(self, nChanges, changesInfosList)
+    def callback_upd(self, changesInfosList):
+        update_success =  update_map(self, changesInfosList)
         if update_success:
             moves = self.decide()
             self.__connection.send_mov(moves)
         return update_success
 
-    def callback_map(self, nTiles, tilesInfosList):
-        return_value = update_map(self, nTiles, tilesInfosList)
+    def callback_map(self, tilesInfosList):
+        return_value = update_map(self, tilesInfosList)
         if self.__board[self.__startingHome[0]][self.__startingHome[1]].faction in [Faction.VAMP,Faction.WERE]:
             self.__us = self.__board[self.__startingHome[0]][self.__startingHome[1]].faction
         else:
@@ -61,26 +57,23 @@ class GameClient():
                                                         #TODO @paternose
 
 
-    def update_map(self, nChanges, changesInfosList):
-        if nChanges == len(changesInfosList):
-            for change in changesInfosList:
-                x = change[0]
-                y = change[1]
-                nHum = change[2]
-                nVamp = change[3]
-                nWere = change[4]
-                if (nHum*nVamp == 0) and (nHum*nWere == 0) and (nVamp*nWere == 0):
-                    #  checks that there is no couple of faction on a single tile
-                    if nHum != 0:
-                        self.__board[x][y] = board_tile(x,y,nb=nHum,faction=Faction.HUM)
-                    if nVamp != 0:
-                        self.__board[x][y] = board_tile(x,y,nb=nVamp,faction=Faction.VAMP)
-                    if nWere != 0:
-                        self.__board[x][y] = board_tile(x,y,nb=nWere,faction=Faction.WERE)
-                else :
-                    return False
-        else:
-            return False
+    def update_map(self, changesInfosList):
+        for change in changesInfosList:
+            x = change[0]
+            y = change[1]
+            nHum = change[2]
+            nVamp = change[3]
+            nWere = change[4]
+            if (nHum*nVamp == 0) and (nHum*nWere == 0) and (nVamp*nWere == 0):
+                #  checks that there is no couple of faction on a single tile
+                if nHum != 0:
+                    self.__board[x][y] = board_tile(x,y,nb=nHum,faction=Faction.HUM)
+                if nVamp != 0:
+                    self.__board[x][y] = board_tile(x,y,nb=nVamp,faction=Faction.VAMP)
+                if nWere != 0:
+                    self.__board[x][y] = board_tile(x,y,nb=nWere,faction=Faction.WERE)
+            else :
+                return False
         return True        
         
     def decide(self):
