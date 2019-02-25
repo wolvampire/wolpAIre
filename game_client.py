@@ -54,8 +54,8 @@ class GameClient():
         self.start()
 
     def callback_bye(self):
-                                                        #TODO @paternose
-
+        pass
+        #TODO @paternose
 
     def update_map(self, changesInfosList):
         for change in changesInfosList:
