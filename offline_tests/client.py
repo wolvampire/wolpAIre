@@ -53,13 +53,10 @@ class GameClient():
                      - np.sum([tile.nb for tile in ally_tiles + enemy_tiles if tile.faction != self.faction])
         else:
             best_troop_orders = []
-            possibilities = self.compute_all_possibilities(ally_tiles, enemy_tiles, human_tiles)
+            possibilities = self.compute_all_possibilities(ally_tiles, ally_tiles + enemy_tiles + human_tiles)
             score_per_possibility = [-inf]*len(possibilities)
-            enemy_possibilities = self.compute_all_possibilities(enemy_tiles, ally_tiles, human_tiles)
+            enemy_possibilities = self.compute_all_possibilities(enemy_tiles, enemy_tiles + ally_tiles + human_tiles)
             for (i,poss) in enumerate(possibilities):
-                #for a in poss:
-                    #print(' : {}'.format(poss))
-                #print('possibilities : {}'.format(poss))
                 minmax_score = -inf if faction==self.faction else inf
                 for enemy_poss in enemy_possibilities:
                     #next_step_board
@@ -150,33 +147,46 @@ class GameClient():
         return next_faction, new_ally_tiles, new_enemy_tiles, new_human_tiles, combat_occurred
 
 
-    def compute_all_possibilities(self, ally_tiles, enemy_tiles, human_tiles):
+    def compute_all_possibilities(self, ally_tiles, target_tiles):
         if len(ally_tiles) == 1:
-            possibilites = []
-            orders_for_one_tile = self.compute_orders_for_one_tile(ally_tiles[0], ally_tiles + enemy_tiles + human_tiles)
-            possibilites.append([[element] for element in orders_for_one_tile])
-            return possibilites
+            possibilities = []
+            orders_for_one_tile = self.compute_orders_for_one_tile(ally_tiles[0], target_tiles)  #2
+            for order in orders_for_one_tile:
+                possibilities.append([order])
+            return possibilities
         else:
             ally = ally_tiles[0]
-            sub_possibilites = self.compute_all_possibilities(ally_tiles[1:], enemy_tiles, human_tiles)
-            possibilites = []
-            for order in self.compute_orders_for_one_tile(ally, ally_tiles + enemy_tiles + human_tiles):
-                for poss in sub_possibilites:
-                    possibilites.append(order + poss)
-            return possibilites
-
+            sub_possibilities = self.compute_all_possibilities(ally_tiles[1:], target_tiles)        #3
+            possibilities = []                                                                                  #3
+            for order in self.compute_orders_for_one_tile(ally, target_tiles):        #1
+                for poss in sub_possibilities:                                                                  #2
+                    possibilities.append([order] + poss)
+            return possibilities
 
 
     def compute_orders_for_one_tile(self, ally, targets):
         enumeration = []
         for k in range(ally.nb//2 if ally.nb%2==0 else ally.nb//2 + 1, ally.nb+1):
             for i in range(len(targets)):
-                for j in range(len(targets)):
-                    if i != j :
-                        vector = [0]*len(targets)
-                        vector[i] = k
-                        vector[j] = ally.nb - k
-                        enumeration.append(vector)
+                if k != ally.nb :
+                    if k != ally.nb - k:
+                        for j in range(len(targets)):
+                            if i != j :
+                                vector = [0]*len(targets)
+                                vector[i] = k
+                                vector[j] = ally.nb - k
+                                enumeration.append(vector)
+                    else:
+                        for j in range(i,len(targets)):
+                            if i != j :
+                                vector = [0]*len(targets)
+                                vector[i] = k
+                                vector[j] = ally.nb - k
+                                enumeration.append(vector)
+                else:
+                   vector = [0]*len(targets)
+                   vector[i] = k
+                   enumeration.append(vector)
         return enumeration
 
 
