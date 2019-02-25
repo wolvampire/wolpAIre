@@ -34,6 +34,7 @@ class GameServer():
        
         self.__board[1][1]=board_tile(1,1,10,"WERE")
         self.__board[self.__n-2][self.__m-2]=board_tile(self.__n-2,self.__m-2,10,"VAMP")
+        self.__board[self.__n-4][self.__m-4]=board_tile(self.__n-4,self.__m-4,5,"VAMP")
         self.p1.new_game("VAMP", self.__n, self.__m)
         self.p2.new_game("WERE", self.__n, self.__m)
         
@@ -144,8 +145,8 @@ if __name__ == "__main__":
     nb_games = int(sys.argv[1]) if len(sys.argv)>1 else 100
 
     
-    p1 = GameClient("greed")
-    p2 = GameClient("always_attack")
+    p2 = GameClient("greed")
+    p1 = GameClient("oracle")
     g = GameServer(p1,p2)
     g.new_game()
     g.print_board()
@@ -164,22 +165,6 @@ if __name__ == "__main__":
     playing = True
     while playing:
         g.update(1)
-        tiles_of_interest = get_tiles_of_interest(g.get_board())
-        p1_source = tiles_of_interest[p1.faction][0]
-        p2_tiles = tiles_of_interest[p2.faction]
-        p1_potential_targets = get_potential_targets(p1_source, p2_tiles, tiles_of_interest["HUM"])
-        p1_all_paths = get_all_paths(p1_source, p2_tiles, p1_potential_targets, current_path=[], time_spent=0)
-        print("potential targets for P1 ({})".format(p1.faction))
-        for tile in p1_potential_targets:
-            print("({},{} - {})->({},{} - {})".format(p1_source.x, p1_source.y, p1_source, tile.x, tile.y, tile))
-        
-        print("potential paths for P1 ({})".format(p1.faction))
-        
-        for path in p1_all_paths:
-            print("({},{} - {})".format(p1_source.x, p1_source.y, p1_source),end="")
-            for tile in path:
-                print("->({},{} - {})".format(tile.x, tile.y, tile),end="")
-            print()    
             
         g.print_board()
         a = input()
