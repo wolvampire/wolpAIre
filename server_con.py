@@ -84,6 +84,7 @@ class ServerCon():
         elif message_type == "BYE":
             print("BYE.")
             self.__socket.close()
+            self.__is_connected = False
             self.__game_client.callback_bye()
 
         else:

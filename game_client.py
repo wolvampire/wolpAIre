@@ -29,6 +29,7 @@ class GameClient():
         '''
         All callbacks from the server, receiving formated input
         '''
+        self.start()
         self.__board = [[board_tile(x,y) for y in range(n)] for x in range(m)]
         print(self.__board)
         return True
@@ -54,8 +55,8 @@ class GameClient():
         return_value = self.update_map(tilesInfosList)
         if self.__board[self.__startingHome[0]][self.__startingHome[1]].faction in [Faction.VAMP,Faction.WERE]:
             self.__us = self.__board[self.__startingHome[0]][self.__startingHome[1]].faction
-            self.start()
         else:
+            print("Error callback_map : home faction is {}".format(self.__board[self.__startingHome[0]][self.__startingHome[1]].faction))
             return False
         return return_value
 
@@ -89,13 +90,14 @@ class GameClient():
         """
         returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
         """
-        our_tiles = [board_tile for row in board for board_tile in row if board_tile.faction == self.__us]
+        print("self __us : {}".format(self.__us))
+        our_tiles = [board_tile for row in self.__board for board_tile in row if board_tile.faction == self.__us]
         our_tile = our_tiles[0]
         x = our_tile.x
         y = our_tile.y
         nb = our_tile.nb
         
-        human_tiles = [board_tile for row in board for board_tile in row if board_tile.faction == Faction.HUM]
+        human_tiles = [board_tile for row in self.__board for board_tile in row if board_tile.faction == Faction.HUM]
         
         min_dist = self.__n + self.__m
         target_x, target_y = (0,0)
