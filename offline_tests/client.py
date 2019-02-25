@@ -15,6 +15,8 @@ class GameClient():
             self.decision_fun = self.rand_move
         elif strat=="roxxor":
             self.decision_fun = self.roxxor_move#_verbose
+        elif strat=="roxxor_v":
+            self.decision_fun = self.roxxor_move_verbose
         elif strat=="always_attack":
             self.decision_fun = self.always_attack
     
@@ -159,7 +161,7 @@ class GameClient():
         
         print("Creating decision tree...")
         
-        order_tree = order_node([], [], pre_required, all_paths)
+        order_tree = order_node([], [], pre_required, all_paths, verbose=True)
         order_tree.create_sons()
         best_gain, best_son = order_tree.get_best_gain()
         
@@ -204,7 +206,7 @@ class GameClient():
         pre_required = {t.id:0 for t in our_tiles}  # at first we don't require any troops from any of our tiles
         
         
-        order_tree = order_node([], [], pre_required, all_paths)
+        order_tree = order_node([], [], pre_required, all_paths, verbose=False)
         order_tree.create_sons()
         best_gain, best_son = order_tree.get_best_gain()
         

@@ -3,7 +3,8 @@ import numpy as np
 
 class order_node():
     id_node=0
-    def __init__(self, assigned_paths, assigned_nb, required, potential_paths, depth=0, id_parent=0):
+    def __init__(self, assigned_paths, assigned_nb, required, potential_paths, depth=0, id_parent=0, verbose=False):
+        self.verbose=verbose
         self.assigned_paths = assigned_paths  # all the paths that have troops assigned so far
         self.assigned_nb = assigned_nb  # list of assigned_nb[i]=nb meaning assigned_paths[i] has been assigned nb troops from tile source_tile
         self.required = required  # dict {tile.id:nb} meaning already nb troops have been required for currently assigned paths from tile 
@@ -13,22 +14,22 @@ class order_node():
         self.id_node=order_node.id_node    
         order_node.id_node+=1    
         
-        
-        print("node : {} assigned paths, {} potential paths, {} after filtering".format( 
-                                        len(assigned_paths),
-                                        len(potential_paths), 
-                                        len(self.new_potential_paths)))
-        print("Node {} at depth {}, son of {}:".format(self.id_node, self.depth, id_parent))
-        print("{} assigned paths : ".format(len(assigned_paths)))
-        for p in assigned_paths:
-            print(p)
-        print()
-        print("{} potential paths : ".format(len(potential_paths)))
-        if(len(potential_paths)>0):
-            for p in potential_paths:
+        if verbose:
+            print("node : {} assigned paths, {} potential paths, {} after filtering".format( 
+                                            len(assigned_paths),
+                                            len(potential_paths), 
+                                            len(self.new_potential_paths)))
+            print("Node {} at depth {}, son of {}:".format(self.id_node, self.depth, id_parent))
+            print("{} assigned paths : ".format(len(assigned_paths)))
+            for p in assigned_paths:
                 print(p)
-            print("{} after filtering".format(len(self.new_potential_paths)))
-        print()
+            print()
+            print("{} potential paths : ".format(len(potential_paths)))
+            if(len(potential_paths)>0):
+                for p in potential_paths:
+                    print(p)
+                print("{} after filtering".format(len(self.new_potential_paths)))
+            print()
         
     def create_sons(self):
         self.sons=[]
@@ -58,7 +59,8 @@ class order_node():
                              new_required_dic,
                              potential_paths_shortened,
                              self.depth+1,
-                             self.id_node
+                             self.id_node,
+                             self.verbose
                              )
             self.sons += [son]
         for s in self.sons:

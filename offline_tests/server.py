@@ -41,31 +41,6 @@ class GameServer():
             print("Length of game : {} turns".format(self.nb_tours))
             print("Max decision time for p1 ({}) : {:.2f}s".format(self.p1.faction, self.p1.max_time))
             print("Max decision time for p2 ({}) : {:.2f}s".format(self.p2.faction, self.p2.max_time))
-    
-    
-    def load_game(self):
-        self.nb_games += 1
-        self.nb_tours = 0
-        
-        print("New loaded game ! (#{})".format(self.nb_games))
-        self.__n = 10
-        self.__m = 15
-        self.__board = [[board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
-       
-        self.__board[1][2]=board_tile(1,2,24,"WERE")
-        self.__board[0][8]=board_tile(0,8,9,"HUM")
-        self.__board[0][14]=board_tile(0,14,10,"HUM")
-        self.__board[5][4]=board_tile(5,4,6,"HUM")
-        self.__board[7][5]=board_tile(7,5,3,"HUM")
-        self.__board[7][6]=board_tile(7,6,3,"HUM")
-        self.__board[8][8]=board_tile(8,8,4,"HUM")
-        self.__board[8][11]=board_tile(8,11,17,"VAMP")
-        
-        self.p1.new_game("WERE", self.__n, self.__m)
-        self.p2.new_game("VAMP", self.__n, self.__m)
-        
-        
-        
         
     def print_board(self):
         print("\t",end="")
@@ -179,7 +154,7 @@ if __name__ == "__main__":
     nb_games = int(sys.argv[1]) if len(sys.argv)>1 else 100
 
     p1 = GameClient("greed")
-    p2 = GameClient("always_attack")
+    p2 = GameClient("roxxor")
     g = GameServer(p1,p2)
     # g.load_game()
     g.new_game()
