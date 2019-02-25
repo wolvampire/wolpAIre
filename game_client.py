@@ -1,6 +1,6 @@
 from server_con import *
 from board_tile import *
-from random import random
+import random
 
 
     
@@ -8,7 +8,7 @@ class GameClient():
     def __init__(self):
         self.start_connection()
 
-    def start_connection():
+    def start_connection(self):
         self.__connection = ServerCon(self)
         self.__connection.connect_to_server("127.0.0.1", 6666)
         self.__connection.send_nme("test")
@@ -31,11 +31,13 @@ class GameClient():
         '''
         All callbacks from the server, receiving formated input
         '''
-        self.__board = [[board_tile(x,y) for y in range(m)] for x in range(n)]
+        self.__board = [[board_tile(x,y) for y in range(n)] for x in range(m)]
+        print(self.__board)
         return True
 
     def callback_hum(self, housesCoordinates):
         for (x,y) in housesCoordinates:
+            print("x : {}; y : {}".format(x, y))
             self.__board[x][y] = board_tile(x,y,faction=Faction.HUM)
         return True
 
@@ -44,14 +46,14 @@ class GameClient():
         return True
 
     def callback_upd(self, changesInfosList):
-        update_success =  update_map(self, changesInfosList)
+        update_success =  self.update_map(changesInfosList)
         if update_success:
             moves = self.decide()
             self.__connection.send_mov(moves)
         return update_success
 
     def callback_map(self, tilesInfosList):
-        return_value = update_map(self, tilesInfosList)
+        return_value = self.update_map(tilesInfosList)
         if self.__board[self.__startingHome[0]][self.__startingHome[1]].faction in [Faction.VAMP,Faction.WERE]:
             self.__us = self.__board[self.__startingHome[0]][self.__startingHome[1]].faction
             self.start()
@@ -109,4 +111,4 @@ class GameClient():
 
 if __name__ == '__main__':
     game_client = GameClient()
-    game_client.start()
+    game_client.start_connection()
