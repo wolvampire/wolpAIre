@@ -51,8 +51,8 @@ class ServerCon():
             return False
 
         if message_type == "SET":
-            n = self.__socket.recv(1)
-            m = self.__socket.recv(1)
+            n = self._read_byte()
+            m = self._read_byte()
             print("SET: n={}, m={}".format(n, m))
             self.__game_client.callback_set(n, m)
 
