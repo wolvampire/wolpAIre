@@ -1,7 +1,5 @@
 from server_con import *
 from board_tile import *
-import random
-
 
     
 class GameClient():
@@ -91,22 +89,26 @@ class GameClient():
         """
         returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
         """
-        our_tiles = [board_tile for row in self.__board for board_tile in row
-                             if board_tile.faction == self.__us]
+        our_tiles = [board_tile for row in board for board_tile in row if board_tile.faction == self.__us]
+        our_tile = our_tiles[0]
+        x = our_tile.x
+        y = our_tile.y
+        nb = our_tile.nb
         
+        human_tiles = [board_tile for row in board for board_tile in row if board_tile.faction == Faction.HUM]
         
-        random_tile = random.choice(our_tiles)  # awesome IA algorithm
-        x = random_tile.x
-        y = random_tile.y
-        n = random_tile.n
+        min_dist = self.__n + self.__m
+        target_x, target_y = (0,0)
+        for tile in human_tiles:
+            dist = max(abs(tile.x-our_tile.x), abs(tile.y-our_tile.y))
+            if dist < min_dist and tile.nb < nb:
+                min_dist = dist
+                target_x, target_y = (tile.x, tile.y)
         
-        pot_dest = [(x-1,y-1),(x-1,y),(x-1,y+1),(x,y-1),(x,y+1),(x+1,y-1),(x+1,y),(x+1,y+1)]
+        dir_x = 1 if target_x>our_tile.x else -1 if target_x<our_tile.x else 0
+        dir_y = 1 if target_y>our_tile.y else -1 if target_y<our_tile.y else 0
         
-        
-        dest_x, dest_y = random.choice([(i,j) for (i,j) in pot_dest if i>=0 and i<self.__n and j >=0 and j<self.__m])
-        random_n = random.choice(list(range(1,n+1)))
-
-        return [[x,y,random_n, dest_x, dest_y]]
+        return [[x,y,nb, our_tile.x+dir_x, our_tile.y+dir_y]]   
         
 
 if __name__ == '__main__':
