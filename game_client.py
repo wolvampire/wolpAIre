@@ -44,14 +44,14 @@ class GameClient():
         return True
 
     def callback_upd(self, changesInfosList):
-        update_success =  update_map(self, changesInfosList)
+        update_success =  update_map(changesInfosList)
         if update_success:
             moves = self.decide()
             self.__connection.send_mov(moves)
         return update_success
 
     def callback_map(self, tilesInfosList):
-        return_value = update_map(self, tilesInfosList)
+        return_value = update_map(tilesInfosList)
         if self.__board[self.__startingHome[0]][self.__startingHome[1]].faction in [Faction.VAMP,Faction.WERE]:
             self.__us = self.__board[self.__startingHome[0]][self.__startingHome[1]].faction
             self.start()
