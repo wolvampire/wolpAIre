@@ -6,19 +6,27 @@ from random import random
     
 class GameClient():
     def __init__(self):
-        self.start()
+        self.start_connection()
 
+    def start_connection():
+        self.__connection = ServerCon(self)
+        self.__connection.connect_to_server("127.0.0.1", 6666)
+        self.__connection.send_nme("test")
+        while self.__connection.is_connected():
+            self.__connection.listen()
+        
     def start(self):
         '''
-         Start everything, including connection
+        reset for a new game
         '''
-        self.__connection = ServerCon(self)
+        
         self.__board = [[]]
         self.__n = 0
         self.__m = 0
         self.__startingHome = []
         self.__us = None  # equals "VAMP" or "WERE"
         
+            
     def callback_set(self, n, m):
         '''
         All callbacks from the server, receiving formated input
@@ -46,6 +54,7 @@ class GameClient():
         return_value = update_map(self, tilesInfosList)
         if self.__board[self.__startingHome[0]][self.__startingHome[1]].faction in [Faction.VAMP,Faction.WERE]:
             self.__us = self.__board[self.__startingHome[0]][self.__startingHome[1]].faction
+            self.start()
         else:
             return False
         return return_value
