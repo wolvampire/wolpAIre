@@ -21,7 +21,7 @@ class GameClient():
     def callback_hum(self, lst):
         pass
 
-    def callback_hme(self, lst):
+    def callback_hme(self, x, y):
         pass
 
     def callback_map(self, lst):

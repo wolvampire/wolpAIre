@@ -2,7 +2,8 @@ from game_client import *
 import socket
 import struct
 
-
+def byte_to_int(b):
+    return int.from_bytes(b, byteorder='big')
 
 class ServerCon():
     def __init__(self, game_client):
@@ -25,13 +26,16 @@ class ServerCon():
         print("Lost connection with server.")
         self.__is_connected = False
 
+    def _read_byte(self):
+        return int.from_bytes(self.__socket.recv(1), byteorder='big')
+
     def _receive_list(self, element_len):
-        list_len = self.__socket.recv(1)
+        list_len = self._read_byte()
         lst = []
         for i in range(list_len):
             element = []
             for j in range(element_len):
-                element.append(self.__socket.recv(1))
+                element.append(self._read_byte())
             if len(element) != element_len:
                 self._lost_connection()
             lst.append(element[:])
@@ -54,23 +58,23 @@ class ServerCon():
 
         elif message_type == "HUM":
             lst = self._receive_list(2)
-            print("HUM: n={}".format())
+            print("HUM: n={} -> {}".format(len(lst), lst))
             self.__game_client.callback_hum(lst)
 
         elif message_type == "HME":
-            x = self.__socket.recv(1)
-            y = self.__socket.recv(1)
+            x = self._read_byte()
+            y = self._read_byte()
             print("HME: x={}, y={}".format(x, y))
             self.__game_client.callback_hme(x, y)
 
         elif message_type == "MAP":
             lst = self._receive_list(5)
-            print("MAP: n={}".format(len(lst), lst))
+            print("MAP: n={} -> {}".format(len(lst), lst))
             self.__game_client.callback_map(lst)
 
         elif message_type == "UPD":
             lst = self._receive_list(5)
-            print("UPD: n={} -> ".format(len(lst), lst))
+            print("UPD: n={} -> {}".format(len(lst), lst))
             self.__game_client.callback_upd(lst)
 
         elif message_type == "END":
