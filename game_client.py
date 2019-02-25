@@ -9,28 +9,32 @@ class GameClient():
 
     """ Start everything, including connection """
     def start(self, ):
-        
+        self.__connection.connect_to_server("127.0.0.1", 6666)
+        self.__connection.send_nme("test")
+        while self.__connection.is_connected():
+            self.__connection.listen()
+
     """ All callbacks from the server, receiving formated input """
     def callback_set(self, n, m):
-        
+        pass
 
-    def callback_hum(self, ):
-        
+    def callback_hum(self, lst):
+        pass
 
-    def callback_hme(self, ):
-        
+    def callback_hme(self, lst):
+        pass
 
-    def callback_map(self, ):
-        
+    def callback_map(self, lst):
+        pass
 
-    def callback_upd(self, ):
-        
+    def callback_upd(self, lst):
+        pass
 
-    def callback_end(self, ):
-        
+    def callback_end(self):
+        pass
 
-    def callback_bye(self, ):
-        
+    def callback_bye(self):
+        pass
 
 
 
