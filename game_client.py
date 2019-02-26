@@ -34,8 +34,7 @@ class GameClient():
 
     def callback_hum(self, housesCoordinates):
         for (x,y) in housesCoordinates:
-            self.__board[x][y] = board_tile(x,y,faction=Faction.HUM)
-        return True
+            self.__board.set_tile(board_tile(x,y,faction=Faction.HUM))
 
     def callback_hme(self, x, y):
         self.__startingHome = [x,y]
@@ -45,13 +44,14 @@ class GameClient():
         update_success =  update_map(changesInfosList)
         if update_success:
             moves = self.decide()
+            print(self.__board)
             self.__connection.send_mov(moves)
         return update_success
 
     def callback_map(self, tilesInfosList):
         return_value = update_map(tilesInfosList)
         if self.__board[self.__startingHome[0]][self.__startingHome[1]].faction in [Faction.VAMP,Faction.WERE]:
-            self.__us = self.__board[self.__startingHome[0]][self.__startingHome[1]].faction
+            self.__us = self.__board.get_tile([self.__startingHome[0]][self.__startingHome[1]]).faction
             self.start()
         else:
             return False
@@ -74,11 +74,11 @@ class GameClient():
             if (nHum*nVamp == 0) and (nHum*nWere == 0) and (nVamp*nWere == 0):
                 #  checks that there is no couple of faction on a single tile
                 if nHum != 0:
-                    self.__board[x][y] = board_tile(x,y,nb=nHum,faction=Faction.HUM)
+                    self.__board.set_tile(board_tile(x,y,nb=nHum,faction=Faction.HUM))
                 if nVamp != 0:
-                    self.__board[x][y] = board_tile(x,y,nb=nVamp,faction=Faction.VAMP)
+                    self.__board.set_tile(board_tile(x,y,nb=nVamp,faction=Faction.VAMP))
                 if nWere != 0:
-                    self.__board[x][y] = board_tile(x,y,nb=nWere,faction=Faction.WERE)
+                    self.__board.set_tile(board_tile(x,y,nb=nWere,faction=Faction.WERE))
             else :
                 return False
         return True        
@@ -87,8 +87,7 @@ class GameClient():
         """
         returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
         """
-        our_tiles = [board_tile for row in self.__board for board_tile in row
-                             if board_tile.faction == self.__us]
+        our_tiles = self.__board.get_tiles_of_interest()[self.__us]
         
         
         random_tile = random.choice(our_tiles)  # awesome IA algorithm
