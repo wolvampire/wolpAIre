@@ -15,3 +15,11 @@ class board_tile():
         self.faction=faction
         
         
+    def __str__(self):
+        if self.faction == Faction.EMPT:
+            return "__"
+        faction_str = "L" if self.faction == Faction.WERE else "V" if self.faction == Faction.VAMP else "H"
+        return str(self.nb)+faction_str
+        
+    def __repr__(self):
+        return self.__str__()

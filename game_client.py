@@ -1,7 +1,7 @@
 from server_con import *
 from board_tile import *
 from random import random
-
+from board import Board
 
     
 class GameClient():
@@ -20,9 +20,7 @@ class GameClient():
         reset for a new game
         '''
         
-        self.__board = [[]]
-        self.__n = 0
-        self.__m = 0
+        self.__board = None
         self.__startingHome = []
         self.__us = None  # equals "VAMP" or "WERE"
         
@@ -31,7 +29,7 @@ class GameClient():
         '''
         All callbacks from the server, receiving formated input
         '''
-        self.__board = [[board_tile(x,y) for y in range(m)] for x in range(n)]
+        self.__board = Board(n,m)
         return True
 
     def callback_hum(self, housesCoordinates):
