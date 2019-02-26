@@ -35,6 +35,9 @@ class GameClient():
         human_tiles = [board_tile for row in board for board_tile in row if board_tile.faction == "HUM"]
         enemy_tiles = [board_tile for row in board for board_tile in row if board_tile.faction not in ["HUM","EMPT",self.faction]]
 
+        if len(our_tiles) == 0:
+            return []
+
         if len(human_tiles) > 0:
             troop_orders, score = self.best_troop_orders(self.faction, our_tiles, enemy_tiles, human_tiles)
 
@@ -48,7 +51,7 @@ class GameClient():
         return our_mvts
 
     def best_troop_orders(self, faction, ally_tiles, enemy_tiles, human_tiles):
-        if len(human_tiles) == 0:
+        if len(human_tiles) == 0 or len([1 for tile in ally_tiles + enemy_tiles if tile.faction != self.faction]) == 0:
             return [], np.sum([tile.nb for tile in ally_tiles + enemy_tiles if tile.faction == self.faction])\
                      - np.sum([tile.nb for tile in ally_tiles + enemy_tiles if tile.faction != self.faction])
         else:
@@ -66,6 +69,7 @@ class GameClient():
                                                                                                                      ally_tiles,\
                                                                                                                      enemy_tiles,\
                                                                                                                      human_tiles) 
+                    print('ici : {}, {}, {}'.format(next_faction, next_ally_tiles, next_enemy_tiles))
                     troop_orders, score = self.best_troop_orders(next_faction, next_ally_tiles, next_enemy_tiles, next_human_tiles)
                     if faction == self.faction:
                         if score > minmax_score :
@@ -86,33 +90,35 @@ class GameClient():
     def compute_next_step_board(self, poss, enemy_poss, faction, ally_tiles, enemy_tiles, human_tiles):
         turn = faction
         combat_occurred = False
-        new_ally_tiles = ally_tiles
-        new_enemy_tiles = enemy_tiles
-        new_human_tiles = human_tiles
+        new_ally_tiles = [t for t in ally_tiles]
+        new_enemy_tiles = [t for t in enemy_tiles]
+        new_human_tiles = [t for t in human_tiles]
         while not(combat_occurred):
+            print('computing next step board')
             if turn == faction:
                 turn, new_ally_tiles, new_enemy_tiles, new_human_tiles, combat_occurred = \
                     self.sub_func_of_compute_next_step_board(poss, enemy_poss, turn, new_ally_tiles, new_enemy_tiles, new_human_tiles)
             else:
                 turn, new_enemy_tiles, new_ally_tiles, new_human_tiles, combat_occurred = \
                     self.sub_func_of_compute_next_step_board(enemy_poss, poss, turn, new_enemy_tiles, new_ally_tiles, new_human_tiles)
+            print('next step board computed')
         next_faction = "VAMP" if turn=="WERE" else "WERE"
         return next_faction, new_ally_tiles, new_enemy_tiles, new_human_tiles
 
 
     def sub_func_of_compute_next_step_board(self, poss, enemy_poss, turn, ally_tiles, enemy_tiles, human_tiles, combat_occurred=False):
-        new_ally_tiles = ally_tiles
-        new_enemy_tiles = enemy_tiles
-        new_human_tiles = human_tiles
+        new_ally_tiles = [t for t in ally_tiles]
+        new_enemy_tiles = [t for t in enemy_tiles]
+        new_human_tiles = [t for t in human_tiles]
         next_faction = "VAMP" if turn=="WERE" else "WERE"
         temporary_new_ally_tiles = []
         for (i, ally) in enumerate(ally_tiles):
             for (j, target) in enumerate(ally_tiles + enemy_tiles + human_tiles):
-                print(': {},{}'.format(i,j))
+                print('len(targets) : {}\ndim poss : {},{}\ni : {}\nj : {}'.format(len(ally_tiles + enemy_tiles + human_tiles),len(poss),len(poss[0]), i, j))
                 if poss[i][j] != 0:
                     dir_x, dir_y = self.compute_steps(ally.x, ally.y, target.x, target.y)
                     temporary_new_ally_tiles.append(board_tile(ally.x + dir_x, ally.y + dir_y, nb=poss[i][j], faction=turn))
-        new_ally_tiles = temporary_new_ally_tiles
+        new_ally_tiles = [t for t in temporary_new_ally_tiles]
         fusioned_allies = []
         for ally in new_ally_tiles:
             other_new_ally_tiles = new_ally_tiles
@@ -124,7 +130,7 @@ class GameClient():
                     temporary_new_ally_tiles.remove(other_ally)
                     temporary_new_ally_tiles.append(board_tile(ally.x, ally.y, nb=ally.nb + other_ally.nb, faction=turn))
                     fusioned_allies.append(other_ally)
-        new_ally_tiles = temporary_new_ally_tiles
+        new_ally_tiles = [t for t in temporary_new_ally_tiles]
         for ally in temporary_new_ally_tiles:
             for enemy in enemy_tiles:
                 if ally.x == enemy.x and ally.y == enemy.y:
@@ -150,11 +156,13 @@ class GameClient():
     def compute_all_possibilities(self, ally_tiles, target_tiles):
         if len(ally_tiles) == 1:
             possibilities = []
+            print("1 ally_tiles : {}".format(ally_tiles))
             orders_for_one_tile = self.compute_orders_for_one_tile(ally_tiles[0], target_tiles)  #2
             for order in orders_for_one_tile:
                 possibilities.append([order])
             return possibilities
         else:
+            print("2 ally_tiles : {}".format(ally_tiles))
             ally = ally_tiles[0]
             sub_possibilities = self.compute_all_possibilities(ally_tiles[1:], target_tiles)        #3
             possibilities = []                                                                                  #3
@@ -216,7 +224,6 @@ class GameClient():
                     key = lambda tile : min([max(abs(tile.x - other.x), abs(tile.y - other.y)) for other in human_tiles + enemy_tiles]) \
                                             if len(human_tiles + enemy_tiles) > 0 else 0)
         for our_tile in our_tiles:
-            #print('vamp en case {},{}'.format(our_tile.x,our_tile.y))
             nb = our_tile.nb
             targets = []
 
