@@ -42,6 +42,7 @@ class GameClient():
     def new_game(self, faction, n, m):
         self.faction = faction
         self.enemy_faction = "WERE" if faction == "VAMP" else "VAMP"
+
         self.__n = n
         self.__m = m
         
@@ -94,10 +95,7 @@ class GameClient():
                     d = self.compute_distance(a,h)
                     score -= h.nb/(d*d) 
         return score
-    
 
-        
-        
     def the_oracle(self,board):
         """
         returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
@@ -119,8 +117,10 @@ class GameClient():
         else : #TODO (strat quand il n'y a plus d'humains)
             return []
 
+
     def best_troop_orders(self, faction, ally_tiles, enemy_tiles, human_tiles, layer=1):
 #                            alpha=-np.inf, beta=np.inf, maximizing=True):
+
         #print('J\'en suis à la profondeur {}'.format(layer))
         layer += 1
         seperation_per_troop = 1
@@ -136,10 +136,12 @@ class GameClient():
             for j, order in enumerate(poss):
                 print("\tbataillon {} : {}".format(j, order))
 
-
-        return
         score_per_possibility = [-inf]*len(possibilities)
         enemy_possibilities = self.compute_all_possibilities(enemy_tiles, enemy_tiles + ally_tiles + human_tiles, seperation_per_troop)
+
+        score_per_possibility = [-inf]*len(possibilities)
+
+
         for (i,poss) in enumerate(possibilities):
             minmax_score = -inf if faction==self.faction else inf
             all_troop_static = len([1 for l in range(len(poss)) if poss[l][l] == ally_tiles[l].nb]) == len(ally_tiles)
