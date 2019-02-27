@@ -35,7 +35,7 @@ class GameClient():
             for tile in row:
                 if tile.faction != "EMPT":
                     tiles_of_interest[tile.faction] += [tile]
-        return tiles_of_interest[self.faction, self.enemy_faction, "HUM"]
+        return tiles_of_interest[self.faction], tiles_of_interest[self.enemy_faction], tiles_of_interest["HUM"]
         
     def get_gain(source_tile, target_tile):
         """
@@ -103,16 +103,19 @@ class GameClient():
         seperation_per_troop = 1
         best_troop_orders = []
         
-        if len(human_tiles) == 0 or \
-           len(ally_tiles) == 0 or \
-           len(enemy_tiles) == 0 or
-           layer >= self.depth_max:
+        if len(human_tiles) == 0 or len(ally_tiles) == 0 or len(enemy_tiles) == 0 or layer >= self.depth_max:
             #print('Un cas terminal a été atteint. Yey')
             return best_troop_orders, self.H(ally_tiles, enemy_tiles, human_tiles)
 
         possibilities = self.compute_all_possibilities(ally_tiles, ally_tiles + enemy_tiles + human_tiles, seperation_per_troop)
+        for i, poss in enumerate(possibilities):
+            print("son {} :".format(i))
+            for j, order in enumerate(poss):
+                print("\tbataillon {} : {}".format(j, order))
+
+
         score_per_possibility = [-inf]*len(possibilities)
-        enemy_possibilities = self.compute_all_possibilities(enemy_tiles, enemy_tiles + ally_tiles + human_tiles, seperation_per_troop)
+
         for (i,poss) in enumerate(possibilities):
             minmax_score = -inf if faction==self.faction else inf
             all_troop_static = len([1 for l in range(len(poss)) if poss[l][l] == ally_tiles[l].nb]) == len(ally_tiles)
