@@ -19,6 +19,7 @@ class GameClient():
     
     def new_game(self, faction, n, m):
         self.faction = faction
+        self.enemy_faction = "VAMP" if faction=="WERE" else "WERE"
         self.__n = n
         self.__m = m
         
@@ -26,14 +27,20 @@ class GameClient():
 
         # return self.rand_move(board)
         return self.decision_fun(board)
+     
+    def get_tiles_of_interest(self, board):
+        tiles_of_interest = {"VAMP":[], "WERE":[], "HUM":[]}
+        for row in board:
+            for tile in row:
+                if tile.faction != "EMPT":
+                    tiles_of_interest[tile.faction] += [tile]
+        return tiles_of_interest[self.faction, self.enemy_faction, "HUM"]
         
     def the_oracle(self,board):
         """
         returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
         """
-        our_tiles = [board_tile for row in board for board_tile in row if board_tile.faction == self.faction]
-        human_tiles = [board_tile for row in board for board_tile in row if board_tile.faction == "HUM"]
-        enemy_tiles = [board_tile for row in board for board_tile in row if board_tile.faction not in ["HUM","EMPT",self.faction]]
+        our_tiles, human_tiles, enemy_tiles = self.get_tiles_of_interest(board)
 
         if len(our_tiles) == 0:
             return []
