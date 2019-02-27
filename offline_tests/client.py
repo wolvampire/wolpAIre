@@ -8,6 +8,7 @@ class GameClient():
         self.score = 0  # nb of games won
         self.decision_fun = 0
         self.strat = strat
+        self.depth_max = 6  # max depth when exploring the tree of possibilities
         if strat=="greed":
             self.decision_fun = self.greed_move
         elif strat=="random":
@@ -36,11 +37,49 @@ class GameClient():
                     tiles_of_interest[tile.faction] += [tile]
         return tiles_of_interest[self.faction, self.enemy_faction, "HUM"]
         
+    def get_gain(source_tile, target_tile):
+        """
+        For a given number of troops and a given target tile (enemy or human)
+        returns what we can expect to gain by trying to conquer the tile with those troops
+        """
+        nb_att = source_tile.nb
+        nb_def = target_tile.nb
+        if target_tile.faction=="HUM":
+            p = 1 if nb_att>nb_def else nb_att/(2*nb_def)
+            exp_us = p*p*nb_att + p*nb_def  # probability p of winning and then each unit has p of surviving and each human has p of turning into us
+            return exp_us-nb_att    
+    
+        p = min(1,max(nb_att/(2*nb_def), nb_att/nb_def-0.5))  # rules in the pdf
+        exp_us = p*p*nb_att  # probability p of winning and then each unit has p of surviving
+        exp_them = (1-p)*(1-p)*nb_def
+        return (exp_us-nb_att)-(exp_them-nb_def)    
+    
+    
+    def H(self, ally_tiles, enemy_tiles, human_tiles):
+        """
+        The heuristic function
+        """
+        score = 0
+        for a in ally_tiles:
+            score += a.nb
+            for h in human_tiles:
+                if h.nb < a.nb :
+                    d = self.compute_distance(a,h)
+                    score += h.nb/(d*d)  # first try at taking into account the positions on the board
+        for e in enemy_tiles:
+            score -= e.nb    
+            for h in human_tiles:
+                if h.nb < e.nb :
+                    d = self.compute_distance(a,h)
+                    score -= h.nb/(d*d) 
+        return score
+        
+        
     def the_oracle(self,board):
         """
         returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
         """
-        our_tiles, human_tiles, enemy_tiles = self.get_tiles_of_interest(board)
+        our_tiles, enemy_tiles, human_tiles = self.get_tiles_of_interest(board)
 
         if len(our_tiles) == 0:
             return []
@@ -57,58 +96,60 @@ class GameClient():
         else : #TODO (strat quand il n'y a plus d'humains)
             return []
 
-    def best_troop_orders(self, faction, ally_tiles, enemy_tiles, human_tiles, layer=1):
+    def best_troop_orders(self, faction, ally_tiles, enemy_tiles, human_tiles, layer=1, 
+                            alpha=-np.inf, beta=np.inf, maximizing=True):
         #print('J\'en suis à la profondeur {}'.format(layer))
         layer += 1
         seperation_per_troop = 1
+        best_troop_orders = []
+        
         if len(human_tiles) == 0 or \
            len(ally_tiles) == 0 or \
-           len(enemy_tiles) == 0 :
+           len(enemy_tiles) == 0 or
+           layer >= self.depth_max:
             #print('Un cas terminal a été atteint. Yey')
-            return [], np.sum([tile.nb for tile in ally_tiles + enemy_tiles if tile.faction == self.faction])\
-                     - np.sum([tile.nb for tile in ally_tiles + enemy_tiles if tile.faction != self.faction])
-        else:
-            best_troop_orders = []
-            possibilities = self.compute_all_possibilities(ally_tiles, ally_tiles + enemy_tiles + human_tiles, seperation_per_troop)
-            score_per_possibility = [-inf]*len(possibilities)
-            enemy_possibilities = self.compute_all_possibilities(enemy_tiles, enemy_tiles + ally_tiles + human_tiles, seperation_per_troop)
-            for (i,poss) in enumerate(possibilities):
-                minmax_score = -inf if faction==self.faction else inf
-                all_troop_static = len([1 for l in range(len(poss)) if poss[l][l] == ally_tiles[l].nb]) == len(ally_tiles)
-                if all_troop_static:
-                    score_per_possibility[i] = minmax_score
-                else:
-                    for enemy_poss in enemy_possibilities:
-                        #next_step_board
-                        #print('Calcul du scénario n°{} de la profondeur {}'.format(i, layer))
-                        next_faction, next_ally_tiles, next_enemy_tiles, next_human_tiles = self.compute_next_step_board(poss,\
-                                                                                                                         enemy_poss,\
-                                                                                                                         faction,\
-                                                                                                                         ally_tiles,\
-                                                                                                                         enemy_tiles,\
-                                                                                                                         human_tiles) 
-                        troop_orders, score = self.best_troop_orders(next_faction, next_ally_tiles, next_enemy_tiles, next_human_tiles, layer=layer)
-                        if faction == self.faction:
-                            if score > minmax_score :
-                                minmax_score = score
-                        else:
-                            if score < minmax_score:
-                                minmax_score = score
-                    score_per_possibility[i] = minmax_score
-            best_case_scenario = possibilities[score_per_possibility.index(max(score_per_possibility))]
-            if layer==2:
-                print('allies {} : {}'.format(faction, [(ally.x,ally.y) for ally in ally_tiles]))
-                print('targets : {} {} / {} {} / {} {}'.format(faction, [(ally.x,ally.y) for ally in ally_tiles],\
-                                                               "VAMP" if faction == "WERE" else "WERE", [(e.x,e.y) for e in enemy_tiles],\
-                                                               "HUM", [(h.x,h.y) for h in human_tiles]))
-                print('best_case_scenario with score {} :'.format(max(score_per_possibility)))
-                for line in best_case_scenario:
-                    print(line)
-            for (i,ally) in enumerate(ally_tiles):
-                for (j,target) in enumerate(ally_tiles + enemy_tiles + human_tiles):
-                    if best_case_scenario[i][j] != 0:
-                        best_troop_orders.append([ally.x, ally.y, best_case_scenario[i][j], target.x, target.y])
-            return best_troop_orders, max(score_per_possibility)
+            return best_troop_orders, self.H(ally_tiles, enemy_tiles, human_tiles)
+
+        possibilities = self.compute_all_possibilities(ally_tiles, ally_tiles + enemy_tiles + human_tiles, seperation_per_troop)
+        score_per_possibility = [-inf]*len(possibilities)
+        enemy_possibilities = self.compute_all_possibilities(enemy_tiles, enemy_tiles + ally_tiles + human_tiles, seperation_per_troop)
+        for (i,poss) in enumerate(possibilities):
+            minmax_score = -inf if faction==self.faction else inf
+            all_troop_static = len([1 for l in range(len(poss)) if poss[l][l] == ally_tiles[l].nb]) == len(ally_tiles)
+            if all_troop_static:
+                score_per_possibility[i] = minmax_score
+            else:
+                for enemy_poss in enemy_possibilities:
+                    #next_step_board
+                    #print('Calcul du scénario n°{} de la profondeur {}'.format(i, layer))
+                    next_faction, next_ally_tiles, next_enemy_tiles, next_human_tiles = self.compute_next_step_board(poss,\
+                                                                                                                     enemy_poss,\
+                                                                                                                     faction,\
+                                                                                                                     ally_tiles,\
+                                                                                                                     enemy_tiles,\
+                                                                                                                     human_tiles) 
+                    troop_orders, score = self.best_troop_orders(next_faction, next_ally_tiles, next_enemy_tiles, next_human_tiles, layer=layer)
+                    if faction == self.faction:
+                        if score > minmax_score :
+                            minmax_score = score
+                    else:
+                        if score < minmax_score:
+                            minmax_score = score
+                score_per_possibility[i] = minmax_score
+        best_case_scenario = possibilities[score_per_possibility.index(max(score_per_possibility))]
+        if layer==2:
+            print('allies {} : {}'.format(faction, [(ally.x,ally.y) for ally in ally_tiles]))
+            print('targets : {} {} / {} {} / {} {}'.format(faction, [(ally.x,ally.y) for ally in ally_tiles],\
+                                                           "VAMP" if faction == "WERE" else "WERE", [(e.x,e.y) for e in enemy_tiles],\
+                                                           "HUM", [(h.x,h.y) for h in human_tiles]))
+            print('best_case_scenario with score {} :'.format(max(score_per_possibility)))
+            for line in best_case_scenario:
+                print(line)
+        for (i,ally) in enumerate(ally_tiles):
+            for (j,target) in enumerate(ally_tiles + enemy_tiles + human_tiles):
+                if best_case_scenario[i][j] != 0:
+                    best_troop_orders.append([ally.x, ally.y, best_case_scenario[i][j], target.x, target.y])
+        return best_troop_orders, max(score_per_possibility)
 
 
     def compute_next_step_board(self, poss, enemy_poss, faction, ally_tiles, enemy_tiles, human_tiles):
