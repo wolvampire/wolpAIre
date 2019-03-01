@@ -51,8 +51,10 @@ class GameClient():
 
     def callback_map(self, tilesInfosList):
         return_value = self.update_map(tilesInfosList)
-        assert self.__board.tile(self.__startingHome[0], self.__startingHome[1]).faction in [Faction.VAMP,Faction.WERE]
-        BoardTile.ally_faction = self.__board.tile(self.__startingHome[0], self.__startingHome[1]).faction
+        print(self.__board)
+        start_tile_faction = self.__board.tile(self.__startingHome[0], self.__startingHome[1]).faction
+        assert start_tile_faction in [Faction.VAMP, Faction.WERE], start_tile_faction
+        BoardTile.ally_faction = start_tile_faction
         return return_value
 
     def callback_end(self):
@@ -69,19 +71,26 @@ class GameClient():
             nHum = change[2]
             nVamp = change[3]
             nWere = change[4]
-            if (nHum*nVamp == 0) and (nHum*nWere == 0) and (nVamp*nWere == 0):
-                #  checks that there is no couple of faction on a single tile
-                if nHum != 0:
-                    self.__board.tile(x,y).nb = nHum
-                    self.__board.tile(x,y).faction.HUM
-                if nVamp != 0:
-                    self.__board.tile(x,y).nb = nVamp
-                    self.__board.tile(x,y).faction.VAMP
-                if nWere != 0:
-                    self.__board.tile(x,y).nb = nWere
-                    self.__board.tile(x,y).faction.WERE
-            else :
-                return False
+            print("Received order : {}".format(change))
+            # checks that there is no couple of faction on a single tile
+            assert (nHum*nVamp == 0) and (nHum*nWere == 0) and (nVamp*nWere == 0)
+            if nHum != 0:
+                self.__board.tile(x,y).nb = nHum
+                self.__board.tile(x,y).faction = Faction.HUM
+                print("Added {} humans.".format(nHum))
+            elif nVamp != 0:
+                self.__board.tile(x,y).nb = nVamp
+                self.__board.tile(x,y).faction = Faction.VAMP
+                print("Added {} vampires.".format(nVamp))
+            elif nWere != 0:
+                self.__board.tile(x,y).nb = nWere
+                self.__board.tile(x,y).faction = Faction.WERE
+                print("Added {} werewolves.".format(nWere))
+            else:
+                self.__board.tile(x,y).nb = 0
+                self.__board.tile(x,y).faction.EMPT
+                print("Emptied tile.")
+        print(self.__board)
         return True        
         
     def decide(self):
@@ -89,10 +98,14 @@ class GameClient():
         returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
         """
         our_tiles = self.__board.get_tiles_of_interest()[BoardTile.ally_faction]
+        our_tile = our_tiles[0]
+        x = our_tile.x
+        y = our_tile.y
+        nb = our_tile.nb
         
-        human_tiles = [board_tile for row in self.__board for board_tile in row if board_tile.faction == Faction.HUM]
+        human_tiles = self.__board.get_tiles_of_interest()[Faction.HUM]
         
-        min_dist = self.__n + self.__m
+        min_dist = self.__board.height + self.__board.width
         target_x, target_y = (0,0)
         for tile in human_tiles:
             dist = max(abs(tile.x-our_tile.x), abs(tile.y-our_tile.y))

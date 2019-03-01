@@ -3,15 +3,25 @@ from board_tile import *
 
 
 class Board():
-    def __init__(self,n,m):
+    def __init__(self, n, m):
+        self.__width = n
+        self.__height = m
         self.__board = np.array([[BoardTile(x,y) for y in range(m)] for x in range(n)])
+
+    @property
+    def width(self):
+        return self.__width
+
+    @property
+    def height(self):
+        return self.__height
 
     def tile(self, x, y):
         return self.__board[x, y]
 
     def get_tiles_of_interest(self):
         tiles_of_interest = {Faction.VAMP:[], Faction.WERE:[], Faction.HUM:[]}
-        for row in board:
+        for row in self.__board:
             for tile in row:
                 if tile.faction != Faction.EMPT:
                     tiles_of_interest[tile.faction] += [tile]
@@ -19,12 +29,13 @@ class Board():
 
     def __str__(self):
         s = "\t"
-        for j in range(board.shape[0]):
+        for j in range(self.__board.shape[0]):
             s+="{}\t".format(j)
-        s+="\n"
-        for i in range(board.shape[1]):
+        s+="\n\n"
+        for i in range(self.__board.shape[1]):
             s+="{}\t".format(i)
-            for j in range(board.shape[0]):
-                s+=str(self.__board[i][j])
+            for j in range(self.__board.shape[0]):
+                s+=str(self.__board[j][i])
                 s+="\t"
-            s+="\n"
+            s+="\n\n"
+        return s
