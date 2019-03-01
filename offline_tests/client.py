@@ -88,10 +88,13 @@ class GameClient():
                             if score < minmax_score:
                                 minmax_score = score
                     score_per_possibility[i] = minmax_score
-            best_case_scenario = possibilities[score_per_possibility.index(max(score_per_possibility))]
+            if faction == self.faction:
+                best_case_scenario = possibilities[score_per_possibility.index(max(score_per_possibility))]
+            else:
+                best_case_scenario = possibilities[score_per_possibility.index(min(score_per_possibility))]
             if layer==2:
                 print('allies {} : {}'.format(faction, [(ally.x,ally.y) for ally in ally_tiles]))
-                print('targets : {} {} / {} {} / {} {}'.format(faction, [(ally.x,ally.y) for ally in ally_tiles],\
+                print('targets : {} {} / {} {} / {} {}'.format(faction, [(a.x,a.y) for a in ally_tiles],\
                                                                "VAMP" if faction == "WERE" else "WERE", [(e.x,e.y) for e in enemy_tiles],\
                                                                "HUM", [(h.x,h.y) for h in human_tiles]))
                 print('best_case_scenario with score {} :'.format(max(score_per_possibility)))

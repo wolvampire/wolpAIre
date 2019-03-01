@@ -35,8 +35,8 @@ class GameServer():
         self.__board[1][self.__m-2] = board_tile(1, self.__m-2, 5, "HUM")
         self.__board[self.__n-2][1] = board_tile(self.__n-2, 1, 5, "HUM")
         self.__board[1][1]=board_tile(1,1,10,"WERE")
-        self.__board[self.__n-2][self.__m-2]=board_tile(self.__n-2,self.__m-2,5,"VAMP")
-        self.__board[self.__n-1][self.__m//2]=board_tile(self.__n-1,self.__m//2,5,"VAMP")
+        self.__board[self.__n-2][self.__m-2]=board_tile(self.__n-2,self.__m-2,11,"VAMP")
+        #self.__board[self.__n-1][self.__m//2]=board_tile(self.__n-1,self.__m//2,5,"VAMP")
         self.p1.new_game("VAMP", self.__n, self.__m)
         self.p2.new_game("WERE", self.__n, self.__m)
         
