@@ -102,6 +102,7 @@ class ServerCon():
         self.__socket.send(paquet)
 
     def send_mov(self, move_list):
+        print("Move order : {}".format(move_list))
         n = len(move_list)
         paquet = bytes()
         paquet += "MOV".encode()
