@@ -28,19 +28,21 @@ class GameClient():
         '''
         All callbacks from the server, receiving formated input
         '''
+        self.start()
         self.__board = Board(m, n)
         return True
 
     def callback_hum(self, housesCoordinates):
         for (x,y) in housesCoordinates:
             self.__board.tile(x, y).faction = Faction.HUM
+        return True
 
     def callback_hme(self, x, y):
         self.__startingHome = [x, y]
         return True
 
     def callback_upd(self, changesInfosList):
-        update_success =  update_map(changesInfosList)
+        update_success =  self.update_map(changesInfosList)
         if update_success:
             moves = self.decide()
             print(self.__board)
@@ -48,7 +50,7 @@ class GameClient():
         return update_success
 
     def callback_map(self, tilesInfosList):
-        return_value = update_map(tilesInfosList)
+        return_value = self.update_map(tilesInfosList)
         assert self.__board.tile(self.__startingHome[0], self.__startingHome[1]).faction in [Faction.VAMP,Faction.WERE]
         BoardTile.ally_faction = self.__board.tile(self.__startingHome[0], self.__startingHome[1]).faction
         return return_value
@@ -88,22 +90,22 @@ class GameClient():
         """
         our_tiles = self.__board.get_tiles_of_interest()[BoardTile.ally_faction]
         
+        human_tiles = [board_tile for row in self.__board for board_tile in row if board_tile.faction == Faction.HUM]
         
-        random_tile = random.choice(our_tiles)  # awesome IA algorithm
-        x = random_tile.x
-        y = random_tile.y
-        n = random_tile.n
+        min_dist = self.__n + self.__m
+        target_x, target_y = (0,0)
+        for tile in human_tiles:
+            dist = max(abs(tile.x-our_tile.x), abs(tile.y-our_tile.y))
+            if dist < min_dist and tile.nb < nb:
+                min_dist = dist
+                target_x, target_y = (tile.x, tile.y)
         
-        pot_dest = [(x-1,y-1),(x-1,y),(x-1,y+1),(x,y-1),(x,y+1),(x+1,y-1),(x+1,y),(x+1,y+1)]
+        dir_x = 1 if target_x>our_tile.x else -1 if target_x<our_tile.x else 0
+        dir_y = 1 if target_y>our_tile.y else -1 if target_y<our_tile.y else 0
         
-        
-        dest_x, dest_y = random.choice([(i,j) for (i,j) in pot_dest if i>=0 and i<self.__n and j >=0 and j<self.__m])
-        random_n = random.choice(list(range(1,n+1)))
-
-        return [[x,y,random_n, dest_x, dest_y]]
+        return [[x,y,nb, our_tile.x+dir_x, our_tile.y+dir_y]]   
         
 
 if __name__ == '__main__':
     game_client = GameClient()
-    game_client.start()
     game_client.start_connection()
