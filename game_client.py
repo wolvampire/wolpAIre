@@ -6,9 +6,9 @@ from board import Board
     
 class GameClient():
     def __init__(self):
-        self.start_connection()
+        self.start()
 
-    def start_connection():
+    def start_connection(self):
         self.__connection = ServerCon(self)
         self.__connection.connect_to_server("127.0.0.1", 6666)
         self.__connection.send_nme("test")
@@ -22,22 +22,21 @@ class GameClient():
         
         self.__board = None
         self.__startingHome = []
-        self.__us = None  # equals "VAMP" or "WERE"
         
             
     def callback_set(self, n, m):
         '''
         All callbacks from the server, receiving formated input
         '''
-        self.__board = Board(n,m)
+        self.__board = Board(m, n)
         return True
 
     def callback_hum(self, housesCoordinates):
         for (x,y) in housesCoordinates:
-            self.__board.set_tile(board_tile(x,y,faction=Faction.HUM))
+            self.__board.tile(x, y).faction = Faction.HUM
 
     def callback_hme(self, x, y):
-        self.__startingHome = [x,y]
+        self.__startingHome = [x, y]
         return True
 
     def callback_upd(self, changesInfosList):
@@ -50,11 +49,8 @@ class GameClient():
 
     def callback_map(self, tilesInfosList):
         return_value = update_map(tilesInfosList)
-        if self.__board[self.__startingHome[0]][self.__startingHome[1]].faction in [Faction.VAMP,Faction.WERE]:
-            self.__us = self.__board.get_tile([self.__startingHome[0]][self.__startingHome[1]]).faction
-            self.start()
-        else:
-            return False
+        assert self.__board.tile(self.__startingHome[0], self.__startingHome[1]).faction in [Faction.VAMP,Faction.WERE]
+        BoardTile.ally_faction = self.__board.tile(self.__startingHome[0], self.__startingHome[1]).faction
         return return_value
 
     def callback_end(self):
@@ -74,11 +70,14 @@ class GameClient():
             if (nHum*nVamp == 0) and (nHum*nWere == 0) and (nVamp*nWere == 0):
                 #  checks that there is no couple of faction on a single tile
                 if nHum != 0:
-                    self.__board.set_tile(board_tile(x,y,nb=nHum,faction=Faction.HUM))
+                    self.__board.tile(x,y).nb = nHum
+                    self.__board.tile(x,y).faction.HUM
                 if nVamp != 0:
-                    self.__board.set_tile(board_tile(x,y,nb=nVamp,faction=Faction.VAMP))
+                    self.__board.tile(x,y).nb = nVamp
+                    self.__board.tile(x,y).faction.VAMP
                 if nWere != 0:
-                    self.__board.set_tile(board_tile(x,y,nb=nWere,faction=Faction.WERE))
+                    self.__board.tile(x,y).nb = nWere
+                    self.__board.tile(x,y).faction.WERE
             else :
                 return False
         return True        
@@ -87,7 +86,7 @@ class GameClient():
         """
         returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
         """
-        our_tiles = self.__board.get_tiles_of_interest()[self.__us]
+        our_tiles = self.__board.get_tiles_of_interest()[BoardTile.ally_faction]
         
         
         random_tile = random.choice(our_tiles)  # awesome IA algorithm
@@ -107,3 +106,4 @@ class GameClient():
 if __name__ == '__main__':
     game_client = GameClient()
     game_client.start()
+    game_client.start_connection()
