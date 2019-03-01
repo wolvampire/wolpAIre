@@ -120,13 +120,11 @@ class GameClient():
 
     def best_troop_orders(self, faction, ally_tiles, enemy_tiles, human_tiles, layer=1, father_node=None):
 #                            alpha=-np.inf, beta=np.inf, maximizing=True):
-
-        #print('J\'en suis à la profondeur {}'.format(layer))
         layer += 1
         seperation_per_troop = 1
         best_troop_orders = []
         
-        if len(human_tiles) == 0 or len(ally_tiles) == 0 or len(enemy_tiles) == 0 or layer >= self.depth_max:
+        if len(human_tiles) == 0 or len(ally_tiles) == 0 or len(enemy_tiles) == 0 or layer-1 >= self.depth_max:
             #print('Un cas terminal a été atteint. Yey')
             return best_troop_orders, self.Heuristic(ally_tiles, enemy_tiles, human_tiles)
 
@@ -136,10 +134,10 @@ class GameClient():
         score_per_possibility = [-inf if faction==self.faction else inf]*len(possibilities)
 
         for (i,poss) in enumerate(possibilities):
-            minmax_score = -inf if faction==self.faction else inf
+            minmax_score = inf if faction==self.faction else -inf
             all_troop_static = len([1 for l in range(len(poss)) if poss[l][l] == ally_tiles[l].nb]) == len(ally_tiles)
             if all_troop_static:
-                score_per_possibility[i] = minmax_score
+                score_per_possibility[i] = -inf if faction==self.faction else inf
             else:
                 for enemy_poss in enemy_possibilities:
                     #next_step_board
@@ -151,24 +149,22 @@ class GameClient():
                                                                                                                      enemy_tiles,\
                                                                                                                      human_tiles) 
                     
-                    
                     next_board = get_board_from_tiles(self.__m, self.__n, next_ally_tiles, next_enemy_tiles, next_human_tiles)
                     #print_board(self.__m, self.__n, next_board)                                                                                              
                     troop_orders, score = self.best_troop_orders(next_faction, next_ally_tiles, next_enemy_tiles, next_human_tiles, layer=layer, father_node=poss)
                     if faction == self.faction:
-                        if score > minmax_score :
+                        if score < minmax_score :
                             minmax_score = score
                     else:
-                        if score < minmax_score:
+                        if score > minmax_score:
                             minmax_score = score
                 score_per_possibility[i] = minmax_score
         best_case_scenario = possibilities[score_per_possibility.index(max(score_per_possibility))]
-
+        '''
         for i, poss in enumerate(possibilities):
             print("possibilité {} à la profondeur {}".format(i, layer-2))
             for j, order in enumerate(poss):
                 print("\tbataillon {} : {}".format(j, order))
-        
         if layer==2:
             print('allies {} : {}'.format(faction, [(ally.x,ally.y) for ally in ally_tiles]))
             print('targets : {} {} / {} {} / {} {}'.format(faction, [(ally.x,ally.y) for ally in ally_tiles],\
@@ -177,7 +173,7 @@ class GameClient():
             print('best case scenario with score {} :'.format(max(score_per_possibility)))
             for line in best_case_scenario:
                 print(line)
-
+        '''
         # Compute troop order from best case scenario
         for (i,ally) in enumerate(ally_tiles):
             for (j,target) in enumerate(ally_tiles + enemy_tiles + human_tiles):
