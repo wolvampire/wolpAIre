@@ -2,11 +2,9 @@ from random import random
 from random import randint
 from client import GameClient
 from time import time
-from world_rep import get_all_paths, get_potential_targets, get_tiles_of_interest
 import sys
 import os 
 
-sys.path.append(os.path.dirname(os.path.join(os.path.realpath(__file__),"../")))  
 from board_tile import board_tile
 
 
@@ -39,6 +37,12 @@ class GameServer():
         self.p1.new_game("VAMP", self.__n, self.__m)
         self.p2.new_game("WERE", self.__n, self.__m)
         
+    def game_report(self):
+        if self.p1.max_time > 2 or self.p2.max_time > 2:
+            
+            print("Length of game : {} turns".format(self.nb_tours))
+            print("Max decision time for p1 ({}) : {:.2f}s".format(self.p1.faction, self.p1.max_time))
+            print("Max decision time for p2 ({}) : {:.2f}s".format(self.p2.faction, self.p2.max_time))
         
     def print_board(self):
         print("\t",end="")
@@ -63,12 +67,18 @@ class GameServer():
         p_enemy_nb = sum([board_tile.nb for row in self.__board for board_tile in row if board_tile.faction == p_enemy.faction])
         if p_nb == 0:
             p_enemy.score+=1
+            self.game_report()
             self.new_game()
+        elif p_enemy_nb == 0:
+            p.score+=1
+            self.game_report()
+            self.new_game() 
         elif self.nb_tours > 100:
             if p_nb > p_enemy_nb:
                 p.score += 1
             elif p_nb < p_enemy_nb:
                 p_enemy.score += 1
+            self.game_report()
             self.new_game()
             
         else:
@@ -144,11 +154,12 @@ class GameServer():
 if __name__ == "__main__":
 
     nb_games = int(sys.argv[1]) if len(sys.argv)>1 else 100
-
     
     p2 = GameClient("greed")
     p1 = GameClient("oracle")
+
     g = GameServer(p1,p2)
+    # g.load_game()
     g.new_game()
     g.print_board()
     
@@ -156,6 +167,7 @@ if __name__ == "__main__":
     
     while(g.nb_games < nb_games):
         g.update(1)
+        
         g.update(2)
         if time()-s >= 1:
             # g.print_board()
@@ -164,6 +176,8 @@ if __name__ == "__main__":
     
     
     playing = True
+    a = input()
+    
     while playing:
         g.update(1)
             
