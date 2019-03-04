@@ -102,6 +102,7 @@ class ServerCon():
         paquet += "NME".encode()
         paquet += int_to_byte(len(name))
         paquet += name.encode()
+        print("Name sent: {}".format(name))
         self.__socket.send(paquet)
 
     def send_mov(self, move_list):
