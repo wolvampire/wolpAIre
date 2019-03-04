@@ -2,6 +2,8 @@ from server_con import *
 from board_tile import *
 from decider import *
 from board import Board
+from roxxor import *
+import time
 
 # auxiliary files for roxxor strategy
 from world_rep import get_all_paths, get_potential_targets, dist
@@ -52,6 +54,7 @@ class GameClient():
     def callback_upd(self, changesInfosList):
         update_success =  self.update_map(changesInfosList)
         if update_success:
+            time.sleep(1)
             moves = self._decide()
             self.__connection.send_mov(moves)
         return update_success
@@ -108,5 +111,5 @@ class GameClient():
 if __name__ == '__main__':
     import closest
     game_client = GameClient()
-    game_client.give_decider(closest.ClosestDecider())
+    game_client.give_decider(roxxor())
     game_client.start_connection()

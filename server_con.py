@@ -2,6 +2,9 @@ from game_client import *
 import socket
 import struct
 
+def int_to_byte(i):
+    return chr(i).encode()
+
 def byte_to_int(b):
     return int.from_bytes(b, byteorder='big')
 
@@ -44,8 +47,8 @@ class ServerCon():
         return lst
 
     def listen(self):
-        message_type = self.__socket.recv(3).decode()
         print("Starting to listen ..")
+        message_type = self.__socket.recv(3).decode()
         if len(message_type) != 3:
             self._lost_connection()
             return False
@@ -97,7 +100,7 @@ class ServerCon():
     def send_nme(self, name):
         paquet = bytes()
         paquet += "NME".encode()
-        paquet += bytes(len(name))
+        paquet += int_to_byte(len(name))
         paquet += name.encode()
         self.__socket.send(paquet)
 
@@ -106,10 +109,10 @@ class ServerCon():
         n = len(move_list)
         paquet = bytes()
         paquet += "MOV".encode()
-        paquet += bytes(n)
+        paquet += int_to_byte(n)
         for move in move_list:
             for i in range(5):
-                paquet += bytes(move[i])
+                paquet += int_to_byte(move[i])
         self.__socket.send(paquet)
 
 
