@@ -1,1 +1,6 @@
 ./offline_tests/__pycache__
+./__pycache/
+*.pyc
+
+
+

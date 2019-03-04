@@ -1,11 +1,12 @@
 from server_con import *
 from board_tile import *
-from random import random
+from decider import *
 from board import Board
 
-    
+
 class GameClient():
     def __init__(self):
+        self.__decider = Decider()
         self.start()
 
     def start_connection(self):
@@ -14,16 +15,19 @@ class GameClient():
         self.__connection.send_nme("test")
         while self.__connection.is_connected():
             self.__connection.listen()
-        
+
     def start(self):
         '''
         reset for a new game
         '''
-        
-        self.__board = None
+        self.__board = [[]]
+        self.__n = 0
+        self.__m = 0
         self.__startingHome = []
-        
-            
+
+    def give_decider(self, decider):
+        self.__decider = decider
+
     def callback_set(self, n, m):
         '''
         All callbacks from the server, receiving formated input
@@ -44,8 +48,7 @@ class GameClient():
     def callback_upd(self, changesInfosList):
         update_success =  self.update_map(changesInfosList)
         if update_success:
-            moves = self.decide()
-            print(self.__board)
+            moves = self._decide()
             self.__connection.send_mov(moves)
         return update_success
 
@@ -92,33 +95,13 @@ class GameClient():
                 print("Emptied tile.")
         print(self.__board)
         return True        
-        
-    def decide(self):
-        """
-        returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
-        """
-        our_tiles = self.__board.get_tiles_of_interest()[BoardTile.ally_faction]
-        our_tile = our_tiles[0]
-        x = our_tile.x
-        y = our_tile.y
-        nb = our_tile.nb
-        
-        human_tiles = self.__board.get_tiles_of_interest()[Faction.HUM]
-        
-        min_dist = self.__board.height + self.__board.width
-        target_x, target_y = (0,0)
-        for tile in human_tiles:
-            dist = max(abs(tile.x-our_tile.x), abs(tile.y-our_tile.y))
-            if dist < min_dist and tile.nb < nb:
-                min_dist = dist
-                target_x, target_y = (tile.x, tile.y)
-        
-        dir_x = 1 if target_x>our_tile.x else -1 if target_x<our_tile.x else 0
-        dir_y = 1 if target_y>our_tile.y else -1 if target_y<our_tile.y else 0
-        
-        return [[x,y,nb, our_tile.x+dir_x, our_tile.y+dir_y]]   
-        
+
+    def _decide(self):
+        return self.__decider.decide(self.__board)
+
 
 if __name__ == '__main__':
+    import closest
     game_client = GameClient()
+    game_client.give_decider(closest.ClosestDecider())
     game_client.start_connection()
