@@ -3,7 +3,8 @@ import numpy as np
 import sys
 import os 
 
-from board_tile import BoardTile
+from board_tile import *
+
 from strategic_path import strategic_path
 
     

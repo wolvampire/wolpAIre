@@ -1,6 +1,7 @@
-from board_tile import BoardTile, Faction
-from world_rep import get_all_paths, get_potential_targets, get_tiles_of_interest, dist
+from board_tile import BoardTile
+from world_rep import *
 from orders_tree import order_node
+from decider import *
 
 class roxxor(Decider):
     def __init__(self):
@@ -10,7 +11,7 @@ class roxxor(Decider):
     def get_name(self):
         return self._name
      
-    def decide(self):
+    def decide(self, board):
         """
         returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
         """
@@ -21,7 +22,7 @@ class roxxor(Decider):
         
         our_tiles = tiles_of_interest[faction]
         enemy_tiles = tiles_of_interest[enemy_faction]
-        enemy_tiles = tiles_of_interest[Faction.HUM]
+        hum_tiles = tiles_of_interest[Faction.HUM]
         
         all_paths = []
         for source in our_tiles:
@@ -35,9 +36,7 @@ class roxxor(Decider):
         order_tree.create_sons()
         best_gain, best_son = order_tree.get_best_gain()
         
-
         moves = []
-
         if best_gain==0:
             for t in our_tiles:
                 closest_target = None
