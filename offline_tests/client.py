@@ -97,8 +97,9 @@ class GameClient():
         x = our_tile.x
         y = our_tile.y
         nb = our_tile.nb
-        
+        enemy_faction = "VAMP" if self.faction=="WERE" else "WERE"
         human_tiles = [board_tile for row in board for board_tile in row if board_tile.faction == "HUM"]
+        enemy_tiles = [board_tile for row in board for board_tile in row if board_tile.faction == enemy_faction]
         
         min_dist = self.__n + self.__m
         target_x, target_y = (0,0)
@@ -107,7 +108,15 @@ class GameClient():
             if dist < min_dist and tile.nb < nb:
                 min_dist = dist
                 target_x, target_y = (tile.x, tile.y)
-        
+                
+        if len(human_tiles)==0:
+            for tile in enemy_tiles:
+                dist = max(abs(tile.x-our_tile.x), abs(tile.y-our_tile.y))
+                if dist < min_dist and tile.nb < nb:
+                    min_dist = dist
+                    target_x, target_y = (tile.x, tile.y)
+            
+            
         dir_x = 1 if target_x>our_tile.x else -1 if target_x<our_tile.x else 0
         dir_y = 1 if target_y>our_tile.y else -1 if target_y<our_tile.y else 0
         
@@ -229,7 +238,7 @@ class GameClient():
                     moves += [(t.x,t.y,t.nb, dest_x, dest_y)]
                                     
         else:
-            post_required = {t.id:0 for t in our_tiles}  # at first we don't require any troops from any of our tiles
+            is_assigned = {t.id:False for t in our_tiles}
             
             for i in range(len(best_son.assigned_paths)):
                 source_tile = best_son.assigned_paths[i].source
@@ -245,12 +254,12 @@ class GameClient():
                 
                 dest_x = x+1 if target_x>x else x-1 if target_x<x else x
                 dest_y = y+1 if target_y>y else y-1 if target_y<y else y
-                post_required[source_tile.id] = nb
+                is_assigned[source_tile.id] = True
                 moves += [(x,y,nb, dest_x, dest_y)]
                 
                 
             for t in our_tiles:
-                if post_required[t.id] == 0:
+                if not is_assigned[source_tile.id]:
                     closest_ally = None
                     closest_dist = np.inf
                     for ally in our_tiles:
@@ -263,5 +272,7 @@ class GameClient():
                         dest_x = t.x+1 if closest_ally.x>t.x else t.x-1 if closest_ally.x<t.x else t.x
                         dest_y = t.y+1 if closest_ally.y>t.y else t.y-1 if closest_ally.y<t.y else t.y
                         moves += [(t.x,t.y,t.nb, dest_x, dest_y)]
+                        if closest_dist == 1:
+                            is_assigned[closest_ally.id] = True  # if the targetwasn't already assigned, we don't risk of making them swap places
             
         return moves

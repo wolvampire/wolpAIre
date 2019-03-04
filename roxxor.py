@@ -1,4 +1,4 @@
-from board_tile import BoardTile
+from board_tile import BoardTile, Faction
 from world_rep import get_all_paths, get_potential_targets, get_tiles_of_interest, dist
 from orders_tree import order_node
 
@@ -36,6 +36,8 @@ class roxxor(Decider):
         best_gain, best_son = order_tree.get_best_gain()
         
 
+        moves = []
+
         if best_gain==0:
             for t in our_tiles:
                 closest_target = None
@@ -51,7 +53,7 @@ class roxxor(Decider):
                     moves += [(t.x,t.y,t.nb, dest_x, dest_y)]
                                     
         else:
-            post_required = {t.id:0 for t in our_tiles}  # at first we don't require any troops from any of our tiles
+            is_assigned = {t.id:False for t in our_tiles}
             
             for i in range(len(best_son.assigned_paths)):
                 source_tile = best_son.assigned_paths[i].source
@@ -67,12 +69,12 @@ class roxxor(Decider):
                 
                 dest_x = x+1 if target_x>x else x-1 if target_x<x else x
                 dest_y = y+1 if target_y>y else y-1 if target_y<y else y
-                post_required[source_tile.id] = nb
+                is_assigned[source_tile.id] = True
                 moves += [(x,y,nb, dest_x, dest_y)]
                 
                 
             for t in our_tiles:
-                if post_required[t.id] == 0:
+                if not is_assigned[source_tile.id]:
                     closest_ally = None
                     closest_dist = np.inf
                     for ally in our_tiles:
@@ -85,5 +87,7 @@ class roxxor(Decider):
                         dest_x = t.x+1 if closest_ally.x>t.x else t.x-1 if closest_ally.x<t.x else t.x
                         dest_y = t.y+1 if closest_ally.y>t.y else t.y-1 if closest_ally.y<t.y else t.y
                         moves += [(t.x,t.y,t.nb, dest_x, dest_y)]
+                        if closest_dist == 1:
+                            is_assigned[closest_ally.id] = True  # if the targetwasn't already assigned, we don't risk of making them swap places
             
         return moves
