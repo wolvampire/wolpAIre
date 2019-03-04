@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
     nb_games = int(sys.argv[1]) if len(sys.argv)>1 else 100
     
-    p2 = GameClient("greed")
+    p2 = GameClient("roxxor")
     p1 = GameClient("oracle")
 
     g = GameServer(p1,p2)
