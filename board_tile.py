@@ -21,6 +21,7 @@ class BoardTile():
         self.__y = y
         self.nb=0
         self.faction=faction
+        self.id = (x,y)
 
     @property
     def x(self):

@@ -3,6 +3,7 @@ from world_rep import get_all_paths, get_potential_targets, get_tiles_of_interes
 from orders_tree import order_node
 from time import time
 from math import ceil
+import numpy as np
 
 class GameClient():
     def __init__(self, strat):
@@ -198,9 +199,10 @@ class GameClient():
         tiles_of_interest = get_tiles_of_interest(board)
         our_tiles = tiles_of_interest[self.faction]
         enemy_tiles = tiles_of_interest[enemy_faction]
+        hum_tiles = tiles_of_interest["HUM"]
         all_paths = []
         for source in our_tiles:
-            potential_targets = get_potential_targets(source, enemy_tiles, tiles_of_interest["HUM"])
+            potential_targets = get_potential_targets(source, enemy_tiles, hum_tiles)
             all_paths += get_all_paths(source, enemy_tiles, potential_targets)
         
         pre_required = {t.id:0 for t in our_tiles}  # at first we don't require any troops from any of our tiles
@@ -210,11 +212,25 @@ class GameClient():
         order_tree.create_sons()
         best_gain, best_son = order_tree.get_best_gain()
         
+        moves = []
 
         if best_gain==0:
-            return self.greed_move(board)
+            for t in our_tiles:
+                closest_target = None
+                closest_dist = np.inf
+                for target in enemy_tiles + hum_tiles:
+                    d = dist(t,target)
+                    if d<closest_dist:
+                        closest_target=target
+                        closest_dist=d
+                if closest_target is not None:
+                    dest_x = t.x+1 if closest_target.x>t.x else t.x-1 if closest_target.x<t.x else t.x
+                    dest_y = t.y+1 if closest_target.y>t.y else t.y-1 if closest_target.y<t.y else t.y
+                    moves += [(t.x,t.y,t.nb, dest_x, dest_y)]
+                                    
         else:
-            moves = []
+            post_required = {t.id:0 for t in our_tiles}  # at first we don't require any troops from any of our tiles
+            
             for i in range(len(best_son.assigned_paths)):
                 source_tile = best_son.assigned_paths[i].source
                 x = source_tile.x
@@ -229,5 +245,23 @@ class GameClient():
                 
                 dest_x = x+1 if target_x>x else x-1 if target_x<x else x
                 dest_y = y+1 if target_y>y else y-1 if target_y<y else y
+                post_required[source_tile.id] = nb
                 moves += [(x,y,nb, dest_x, dest_y)]
+                
+                
+            for t in our_tiles:
+                if post_required[t.id] == 0:
+                    closest_ally = None
+                    closest_dist = np.inf
+                    for ally in our_tiles:
+                        if ally != t:
+                            d = dist(t,ally)
+                            if d<closest_dist:
+                                closest_ally=ally
+                                closest_dist=d
+                    if closest_ally is not None:
+                        dest_x = t.x+1 if closest_ally.x>t.x else t.x-1 if closest_ally.x<t.x else t.x
+                        dest_y = t.y+1 if closest_ally.y>t.y else t.y-1 if closest_ally.y<t.y else t.y
+                        moves += [(t.x,t.y,t.nb, dest_x, dest_y)]
+            
         return moves

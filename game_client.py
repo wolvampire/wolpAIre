@@ -3,6 +3,10 @@ from board_tile import *
 from random import random
 from board import Board
 
+# auxiliary files for roxxor strategy
+from world_rep import get_all_paths, get_potential_targets, dist
+from orders_tree import order_node
+
     
 class GameClient():
     def __init__(self):
@@ -97,26 +101,47 @@ class GameClient():
         """
         returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
         """
-        our_tiles = self.__board.get_tiles_of_interest()[BoardTile.ally_faction]
-        our_tile = our_tiles[0]
-        x = our_tile.x
-        y = our_tile.y
-        nb = our_tile.nb
+        faction = BoardTile.ally_faction
+        enemy_faction = Faction.VAMP if faction==Faction.WERE else Faction.WERE
         
-        human_tiles = self.__board.get_tiles_of_interest()[Faction.HUM]
+        tiles_of_interest = board.get_tiles_of_interest()
         
-        min_dist = self.__board.height + self.__board.width
-        target_x, target_y = (0,0)
-        for tile in human_tiles:
-            dist = max(abs(tile.x-our_tile.x), abs(tile.y-our_tile.y))
-            if dist < min_dist and tile.nb < nb:
-                min_dist = dist
-                target_x, target_y = (tile.x, tile.y)
+        our_tiles = tiles_of_interest[faction]
+        enemy_tiles = tiles_of_interest[enemy_faction]
         
-        dir_x = 1 if target_x>our_tile.x else -1 if target_x<our_tile.x else 0
-        dir_y = 1 if target_y>our_tile.y else -1 if target_y<our_tile.y else 0
+        all_paths = []
+        for source in our_tiles:
+            potential_targets = get_potential_targets(source, enemy_tiles, tiles_of_interest[Faction.HUM])
+            all_paths += get_all_paths(source, enemy_tiles, potential_targets)
         
-        return [[x,y,nb, our_tile.x+dir_x, our_tile.y+dir_y]]   
+        pre_required = {t.id:0 for t in our_tiles}  # at first we don't require any troops from any of our tiles
+        
+        
+        order_tree = order_node([], [], pre_required, all_paths, verbose=False)
+        order_tree.create_sons()
+        best_gain, best_son = order_tree.get_best_gain()
+        
+
+        if best_gain==0:
+            return [[]]
+        else:
+            moves = []
+            for i in range(len(best_son.assigned_paths)):
+                source_tile = best_son.assigned_paths[i].source
+                x = source_tile.x
+                y = source_tile.y
+                target_x = best_son.assigned_paths[i].dests[0].x
+                target_y = best_son.assigned_paths[i].dests[0].y
+                
+                nb = best_son.assigned_nb[i]
+                if best_son.required[source_tile.id] < source_tile.nb:
+                    nb+=source_tile.nb-best_son.required[source_tile.id]  # leave no man behind
+                    best_son.required[source_tile.id] = source_tile.nb
+                
+                dest_x = x+1 if target_x>x else x-1 if target_x<x else x
+                dest_y = y+1 if target_y>y else y-1 if target_y<y else y
+                moves += [(x,y,nb, dest_x, dest_y)]
+        return moves
         
 
 if __name__ == '__main__':
