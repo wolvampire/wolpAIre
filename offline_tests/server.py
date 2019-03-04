@@ -27,13 +27,12 @@ class GameServer():
         
         print("New game ! (#{})".format(self.nb_games))
         self.__n = 5
-        self.__m = 7
+        self.__m = 9
 
         self.__board = [[board_tile(x,y,randint(1,10),"HUM") if random()<P_hum else board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
-        self.__board[1][self.__m-2] = board_tile(1, self.__m-2, 5, "HUM")
-        self.__board[self.__n-2][1] = board_tile(self.__n-2, 1, 5, "HUM")
-        self.__board[1][1]=board_tile(1,1,10,"WERE")
-        self.__board[self.__n-2][self.__m-2]=board_tile(self.__n-2,self.__m-2,11,"VAMP")
+        
+        self.__board[self.__n // 2 - 1][self.__m // 2 - 1]=board_tile(self.__n // 2 - 1,self.__m // 2 - 1,10,"WERE")
+        self.__board[self.__n // 2 + 1][self.__m // 2 - 1]=board_tile(self.__n // 2 + 1,self.__m // 2 - 1,10,"VAMP")
         self.p1.new_game("VAMP", self.__n, self.__m)
         self.p2.new_game("WERE", self.__n, self.__m)
         
