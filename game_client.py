@@ -1,6 +1,6 @@
 from server_con import *
 from board_tile import *
-from random import random
+from decider import *
 from board import Board
 
 # auxiliary files for roxxor strategy
@@ -10,6 +10,7 @@ from orders_tree import order_node
     
 class GameClient():
     def __init__(self):
+        self.__decider = Decider()
         self.start()
 
     def start_connection(self):
@@ -18,16 +19,19 @@ class GameClient():
         self.__connection.send_nme("test")
         while self.__connection.is_connected():
             self.__connection.listen()
-        
+
     def start(self):
         '''
         reset for a new game
         '''
-        
-        self.__board = None
+        self.__board = [[]]
+        self.__n = 0
+        self.__m = 0
         self.__startingHome = []
-        
-            
+
+    def give_decider(self, decider):
+        self.__decider = decider
+
     def callback_set(self, n, m):
         '''
         All callbacks from the server, receiving formated input
@@ -48,8 +52,7 @@ class GameClient():
     def callback_upd(self, changesInfosList):
         update_success =  self.update_map(changesInfosList)
         if update_success:
-            moves = self.decide()
-            print(self.__board)
+            moves = self._decide()
             self.__connection.send_mov(moves)
         return update_success
 
@@ -96,54 +99,14 @@ class GameClient():
                 print("Emptied tile.")
         print(self.__board)
         return True        
-        
-    def decide(self):
-        """
-        returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
-        """
-        faction = BoardTile.ally_faction
-        enemy_faction = Faction.VAMP if faction==Faction.WERE else Faction.WERE
-        
-        tiles_of_interest = board.get_tiles_of_interest()
-        
-        our_tiles = tiles_of_interest[faction]
-        enemy_tiles = tiles_of_interest[enemy_faction]
-        
-        all_paths = []
-        for source in our_tiles:
-            potential_targets = get_potential_targets(source, enemy_tiles, tiles_of_interest[Faction.HUM])
-            all_paths += get_all_paths(source, enemy_tiles, potential_targets)
-        
-        pre_required = {t.id:0 for t in our_tiles}  # at first we don't require any troops from any of our tiles
-        
-        
-        order_tree = order_node([], [], pre_required, all_paths, verbose=False)
-        order_tree.create_sons()
-        best_gain, best_son = order_tree.get_best_gain()
-        
 
-        if best_gain==0:
-            return [[]]
-        else:
-            moves = []
-            for i in range(len(best_son.assigned_paths)):
-                source_tile = best_son.assigned_paths[i].source
-                x = source_tile.x
-                y = source_tile.y
-                target_x = best_son.assigned_paths[i].dests[0].x
-                target_y = best_son.assigned_paths[i].dests[0].y
-                
-                nb = best_son.assigned_nb[i]
-                if best_son.required[source_tile.id] < source_tile.nb:
-                    nb+=source_tile.nb-best_son.required[source_tile.id]  # leave no man behind
-                    best_son.required[source_tile.id] = source_tile.nb
-                
-                dest_x = x+1 if target_x>x else x-1 if target_x<x else x
-                dest_y = y+1 if target_y>y else y-1 if target_y<y else y
-                moves += [(x,y,nb, dest_x, dest_y)]
-        return moves
         
+    def _decide(self):
+        return self.__decider.decide(self.__board)
+
 
 if __name__ == '__main__':
+    import closest
     game_client = GameClient()
+    game_client.give_decider(closest.ClosestDecider())
     game_client.start_connection()
