@@ -5,7 +5,7 @@ from board_tile import *
 class Decider():
     def __init__(self):
         self._name = None
-        self._board = [[]]
+        self._board = None
 
     def get_name(self):
         return self._name
@@ -41,8 +41,8 @@ class Decider():
                 return rslt
             if move[0] not in range(0, self._board.width) or \
                     move[3] not in range(0, self._board.width) or \
-                    move[2] not in range(0, self._board.height) or \
-                    move[4] not in range(0, self._board.height): # Move out of borad
+                    move[1] not in range(0, self._board.height) or \
+                    move[4] not in range(0, self._board.height):  # Move out of borad
                 print("Integrity broken : tile out of bounds (board [{}|{}], move : {}).".format(self._board.width,
                                                                                                  self._board.height,
                                                                                                  move))
@@ -50,9 +50,29 @@ class Decider():
                 return rslt
         # Rule 2 : We cannot move the enemy
         for move in moves:
-            if self._board(move[0], move[1]).relation != Relation.ALLY :
+            if self._board.tile(move[0], move[1]).relation != Relation.ALLY:
                 print("Rule 2 broken : the move {} moves enemy !".format(move))
                 rslt = False
 
-        # Rule 3 :
+        # Rule 3 : Cannot move more than the original pawns
+        population_dict = {}
+        for move in moves:  # Adding nb of pawns as value per tile (key)
+            case = (move[0], move[1])
+            population_dict[case] = self._board.tile(move[0], move[1]).nb
+
+        for move in moves:
+            case = (move[0], move[1])
+            population_dict[case] -= move[2]  # nb of pawns used in the mvt are no more in the tile
+
+        for case, nb_pawns in population_dict.items():
+            if nb_pawns < 0:
+                print("Rule 3 broken : we move {} pawns more than we should from the tile (coordinates : {}) ".format(
+                    -nb_pawns, case))
+                rslt = False
+
+        # Rule 4: We can only move to the adjacent tiles
+        for move in moves:
+            if abs(move[0]-move[3]) > 1 or abs(move[1]-move[4])>1:
+                print("Rule 4 broken : in the move {} the pawns don't go to an adjacent tile".format(move))
+                rslt = False
         return rslt
