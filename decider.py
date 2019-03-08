@@ -77,9 +77,13 @@ class Decider():
                 rslt = False
 
         #Rule 5: Source and Target tiles are not the same
+        sources_list = []
         for move in moves:
-            if (move[0], move[1]) == (move[3], move[4]):
-                print("Rule 5 broken : source and target tiles are the same in the move {}".format(move))
+            sources_list.append((move[0], move[1]))
+
+        for move in moves:
+            if (move[3], move[4]) in sources_list:
+                print("Rule 5 broken : The target {} is already in the sources".format((move[3], move[4])))
                 rslt = False
 
         #Rule 6: We must at least move one pawn
