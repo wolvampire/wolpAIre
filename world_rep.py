@@ -3,19 +3,10 @@ import numpy as np
 import sys
 import os 
 
-from board_tile import BoardTile
+from board_tile import *
+
 from strategic_path import strategic_path
 
-
-
-def get_tiles_of_interest(board):
-    tiles_of_interest = {"VAMP":[], "WERE":[], "HUM":[]}
-    for row in board:
-        for tile in row:
-            if tile.faction != "EMPT":
-                tiles_of_interest[tile.faction] += [tile]
-    return tiles_of_interest
-    
     
 def dist(tile1, tile2):  # returns the distance between two tiles
     return max(abs(tile1.x - tile2.x), abs(tile1.y-tile2.y))

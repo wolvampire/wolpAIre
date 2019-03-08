@@ -2,8 +2,14 @@ from server_con import *
 from board_tile import *
 from decider import *
 from board import Board
+from roxxor import *
+import time
 
+# auxiliary files for roxxor strategy
+from world_rep import get_all_paths, get_potential_targets, dist
+from orders_tree import order_node
 
+    
 class GameClient():
     def __init__(self):
         self.__decider = Decider()
@@ -12,7 +18,7 @@ class GameClient():
     def start_connection(self):
         self.__connection = ServerCon(self)
         self.__connection.connect_to_server("127.0.0.1", 6666)
-        self.__connection.send_nme("test")
+        self.__connection.send_nme(self.__decider.get_name())
         while self.__connection.is_connected():
             self.__connection.listen()
 
@@ -46,10 +52,16 @@ class GameClient():
         return True
 
     def callback_upd(self, changesInfosList):
-        update_success =  self.update_map(changesInfosList)
+        update_success = self.update_map(changesInfosList)
         if update_success:
+            print("Waiting ...")
+            time.sleep(.5)
+            print("Computing ...")
             moves = self._decide()
+            print("Computing done.")
             self.__connection.send_mov(moves)
+        else:
+            print("Failed update, did not decide.")
         return update_success
 
     def callback_map(self, tilesInfosList):
@@ -91,11 +103,12 @@ class GameClient():
                 print("Added {} werewolves.".format(nWere))
             else:
                 self.__board.tile(x,y).nb = 0
-                self.__board.tile(x,y).faction.EMPT
+                self.__board.tile(x,y).faction = Faction.EMPT
                 print("Emptied tile.")
         print(self.__board)
         return True        
 
+        
     def _decide(self):
         return self.__decider.decide(self.__board)
 
@@ -103,5 +116,5 @@ class GameClient():
 if __name__ == '__main__':
     import closest
     game_client = GameClient()
-    game_client.give_decider(closest.ClosestDecider())
+    game_client.give_decider(roxxor())
     game_client.start_connection()
