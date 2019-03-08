@@ -29,7 +29,7 @@ class Decider():
 
     def check_move(self, moves):
         rslt = True
-        # Rule 1
+        # Rule 1 : At least one move is
         if len(moves) == 0:
             print("Rule 1 broken : There is no move.")
             rlst = False
@@ -42,14 +42,17 @@ class Decider():
             if move[0] not in range(0, self._board.width) or \
                     move[3] not in range(0, self._board.width) or \
                     move[2] not in range(0, self._board.height) or \
-                    move[4] not in range(0, self._board.height):
+                    move[4] not in range(0, self._board.height): # Move out of borad
                 print("Integrity broken : tile out of bounds (board [{}|{}], move : {}).".format(self._board.width,
                                                                                                  self._board.height,
                                                                                                  move))
                 rslt = False
                 return rslt
-        # Rule 2
+        # Rule 2 : We cannot move the enemy
         for move in moves:
             if self._board(move[0], move[1]).relation != Relation.ALLY :
-                pass
+                print("Rule 2 broken : the move {} moves enemy !".format(move))
+                rslt = False
+
+        # Rule 3 :
         return rslt
