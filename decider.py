@@ -17,7 +17,7 @@ class Decider():
         self._board = board
         ret = self._decide(self._board)
         if not self.check_move(ret):
-            print("Warning : he move is not valid !")
+            print("Warning : the move is not valid !")
         return ret
 
     def _decide(self, board):
@@ -42,7 +42,7 @@ class Decider():
             if move[0] not in range(0, self._board.width) or \
                     move[3] not in range(0, self._board.width) or \
                     move[1] not in range(0, self._board.height) or \
-                    move[4] not in range(0, self._board.height):  # Move out of borad
+                    move[4] not in range(0, self._board.height):  # Move out of board
                 print("Integrity broken : tile out of bounds (board [{}|{}], move : {}).".format(self._board.width,
                                                                                                  self._board.height,
                                                                                                  move))
