@@ -33,13 +33,13 @@ class BoardTile():
 
     @property
     def relation(self):
-        assert ally_faction in [Faction.WERE, Faction.VAMP]
+        assert self.ally_faction in [Faction.WERE, Faction.VAMP]
         if self.faction == Faction.HUM:
             return Relation.HUM
         if self.faction == Faction.WERE:
-            return Relation.ALLY if ally_faction == Faction.WERE else Relation.ENEMY
+            return Relation.ALLY if self.ally_faction == Faction.WERE else Relation.ENEMY
         if self.faction == Faction.VAMP:
-            return Relation.ALLY if ally_faction == Faction.VAMP else Relation.ENEMY
+            return Relation.ALLY if self.ally_faction == Faction.VAMP else Relation.ENEMY
         return Relation.EMPT
 
     def __copy__(self):

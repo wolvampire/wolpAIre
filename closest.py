@@ -7,7 +7,7 @@ class ClosestDecider(Decider):
     def __init__(self):
         self._name = "Closest"
 
-    def decide(self, board):
+    def _decide(self, board):
         """
         returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
         """
