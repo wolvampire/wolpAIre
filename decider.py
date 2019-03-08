@@ -75,4 +75,17 @@ class Decider():
             if abs(move[0]-move[3]) > 1 or abs(move[1]-move[4])>1:
                 print("Rule 4 broken : in the move {} the pawns don't go to an adjacent tile".format(move))
                 rslt = False
+
+        #Rule 5: Source and Target tiles are not the same
+        for move in moves:
+            if (move[0], move[1]) == (move[3], move[4]):
+                print("Rule 5 broken : source and target tiles are the same in the move {}".format(move))
+                rslt = False
+
+        #Rule 6: We must at least move one pawn
+        for move in moves:
+            if move[2]<=0:
+                print("No pawn is moved in {}".format(move))
+                rslt = False
+
         return rslt
