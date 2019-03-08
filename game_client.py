@@ -55,7 +55,7 @@ class GameClient():
         update_success = self.update_map(changesInfosList)
         if update_success:
             print("Waiting ...")
-            time.sleep(1)
+            time.sleep(.5)
             print("Computing ...")
             moves = self._decide()
             print("Computing done.")
@@ -103,7 +103,7 @@ class GameClient():
                 print("Added {} werewolves.".format(nWere))
             else:
                 self.__board.tile(x,y).nb = 0
-                self.__board.tile(x,y).faction.EMPT
+                self.__board.tile(x,y).faction = Faction.EMPT
                 print("Emptied tile.")
         print(self.__board)
         return True        
