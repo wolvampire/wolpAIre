@@ -2,8 +2,8 @@ from server_con import *
 from board_tile import *
 from decider import *
 from board import Board
-from roxxor import *
 import time
+import sys
 
 # auxiliary files for roxxor strategy
 from world_rep import get_all_paths, get_potential_targets, dist
@@ -66,7 +66,7 @@ class GameClient():
 
     def callback_map(self, tilesInfosList):
         return_value = self.update_map(tilesInfosList)
-        print(self.__board)
+#        print(self.__board)
         start_tile_faction = self.__board.tile(self.__startingHome[0], self.__startingHome[1]).faction
         assert start_tile_faction in [Faction.VAMP, Faction.WERE], start_tile_faction
         BoardTile.ally_faction = start_tile_faction
@@ -105,7 +105,7 @@ class GameClient():
                 self.__board.tile(x,y).nb = 0
                 self.__board.tile(x,y).faction = Faction.EMPT
                 print("Emptied tile.")
-        print(self.__board)
+#        print(self.__board)
         return True        
 
         
@@ -115,6 +115,17 @@ class GameClient():
 
 if __name__ == '__main__':
     import closest
+    import greedy
+    import roxxor
+
+    if len(sys.argv) <= 1:
+        print("This program excepts an algorithms as argument (available : roxxor, greedy).")
+        pass
     game_client = GameClient()
-    game_client.give_decider(roxxor())
+    if sys.argv[1] == 'roxxor':
+        game_client.give_decider(roxxor.roxxor())
+    elif sys.argv[1] == 'greedy':
+        game_client.give_decider(greedy.GreedyDecider())
+    else:
+        print("Invalid algorithm {}, aborting.".format(sys.argv[1]))
     game_client.start_connection()

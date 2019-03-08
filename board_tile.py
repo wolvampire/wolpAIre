@@ -53,3 +53,6 @@ class BoardTile():
 
     def __repr__(self):
         return self.__str__()
+
+    def distance(tile1, tile2):
+        return max(abs(tile1.x-tile2.x), abs(tile1.y-tile2.y))

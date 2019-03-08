@@ -20,11 +20,19 @@ class Board():
         return self.__board[x, y]
 
     def get_tiles_of_interest(self):
-        tiles_of_interest = {Faction.VAMP:[], Faction.WERE:[], Faction.HUM:[]}
+        tiles_of_interest = {
+            Faction.VAMP:[],
+            Faction.WERE:[],
+            Faction.HUM:[],
+            Relation.ALLY:[],
+            Relation.ENEMY:[],
+            Relation.HUM:[]
+        }
         for row in self.__board:
             for tile in row:
                 if tile.faction != Faction.EMPT:
                     tiles_of_interest[tile.faction] += [tile]
+                    tiles_of_interest[tile.relation] += [tile]
         return tiles_of_interest
 
     def __str__(self):
