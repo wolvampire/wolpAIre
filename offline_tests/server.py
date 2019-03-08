@@ -26,8 +26,8 @@ class GameServer():
         self.nb_tours = 0
         
         print("New game ! (#{})".format(self.nb_games))
-        self.__n = 5
-        self.__m = 9
+        self.__n = 10
+        self.__m = 15
 
         self.__board = [[board_tile(x,y,randint(1,10),"HUM") if random()<P_hum else board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
         
@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
     nb_games = int(sys.argv[1]) if len(sys.argv)>1 else 100
     
-    p2 = GameClient("roxxor")
+    p2 = GameClient("greed")
     p1 = GameClient("oracle")
 
     g = GameServer(p1,p2)
@@ -183,7 +183,7 @@ if __name__ == "__main__":
         g.print_board()
         a = input()
         playing = (a != "q")
-        
+         
         g.update(2)
         g.print_board()
         a = input()
