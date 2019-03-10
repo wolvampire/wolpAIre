@@ -43,3 +43,4 @@ if __name__ == '__main__':
                         coefs_panel[i][j][k][l] = (p1.score / nb_games)*100
     print(coefs_panel)
     print('best score for coefs : {}'.format(np.unravel_index(coefs_panel.argmax(), coefs_panel.shape)))
+    print('max : {}\nmoyenne : {}\necart-type : {}'.format(np.amax(coefs_panel),np.mean(coefs_panel), np.sqrt(np.var(coefs_panel))))

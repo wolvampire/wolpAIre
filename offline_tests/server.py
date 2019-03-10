@@ -34,8 +34,8 @@ class GameServer():
         human_coords = [(randint(0,self.__n-1),randint(0,self.__m-1)) for i in range(2)]
         for (x,y) in human_coords:
             self.__board[x][y] = board_tile(x,y,randint(1,5), "HUM")
-        self.__board[self.__n // 2 - 1][self.__m // 2 - 1]=board_tile(self.__n // 2 - 1,self.__m // 2 - 1,5,"WERE")
-        self.__board[self.__n // 2 + 1][self.__m // 2 - 1]=board_tile(self.__n // 2 + 1,self.__m // 2 - 1,5,"VAMP")
+        self.__board[self.__n // 2 - 1][self.__m // 2 - 1]=board_tile(self.__n // 2 - 1,self.__m // 2 - 1,7,"WERE")
+        self.__board[self.__n // 2 + 1][self.__m // 2 - 1]=board_tile(self.__n // 2 + 1,self.__m // 2 - 1,7,"VAMP")
         self.p1.new_game("VAMP", self.__n, self.__m)
         self.p2.new_game("WERE", self.__n, self.__m)
         
@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
     nb_games = int(sys.argv[1]) if len(sys.argv)>1 else 100
     
-    p2 = GameClient("roxxor")
+    p2 = GameClient("greed")
     p1 = GameClient("oracle")
 
     g = GameServer(p1,p2)
