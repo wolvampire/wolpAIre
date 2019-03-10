@@ -29,8 +29,11 @@ class GameServer():
         self.__n = 5
         self.__m = 9
 
-        self.__board = [[board_tile(x,y,randint(1,5),"HUM") if random()<P_hum else board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
-        
+        #self.__board = [[board_tile(x,y,randint(1,5),"HUM") if random()<P_hum else board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
+        self.__board = [[board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
+        human_coords = [(randint(0,self.__n-1),randint(0,self.__m-1)) for i in range(2)]
+        for (x,y) in human_coords:
+            self.__board[x][y] = board_tile(x,y,randint(1,5), "HUM")
         self.__board[self.__n // 2 - 1][self.__m // 2 - 1]=board_tile(self.__n // 2 - 1,self.__m // 2 - 1,5,"WERE")
         self.__board[self.__n // 2 + 1][self.__m // 2 - 1]=board_tile(self.__n // 2 + 1,self.__m // 2 - 1,5,"VAMP")
         self.p1.new_game("VAMP", self.__n, self.__m)

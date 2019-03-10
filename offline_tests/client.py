@@ -5,6 +5,7 @@ from board_tile import board_tile
 from world_rep import get_all_paths, get_potential_targets, get_tiles_of_interest, dist
 from orders_tree import order_node
 from time import time
+from operator import attrgetter
 
 
 
@@ -28,11 +29,12 @@ def get_board_from_tiles(m, n, ally_tiles, enemy_tiles, human_tiles):
         
         
 class GameClient():
-    def __init__(self, strat):
+    def __init__(self, strat, coefs=[1,1,1,1]):
         self.score = 0  # nb of games won
         self.decision_fun = 0
         self.strat = strat
-        self.depth_max = 3  # max depth when exploring the tree of possibilities
+        self.coefs = coefs
+        self.depth_max = 4  # max depth when exploring the tree of possibilities
         if strat=="greed":
             self.decision_fun = self.greed_move
         elif strat=="random":
@@ -117,7 +119,7 @@ class GameClient():
         """
         The heuristic function
         """
-        anti_split_coef = 3
+        anti_split_coef = 2
         score = 0
         for a in ally_tiles:
             score += a.nb
@@ -134,6 +136,70 @@ class GameClient():
         score -= anti_split_coef*len(ally_tiles)
         return score
 
+    def heuristic4(self, ally_tiles, enemy_tiles, human_tiles, faction, previous_ally_tiles, previous_enemy_tiles):
+        eating_humans_coef = self.coefs[0] 
+        faction_diff_coef = self.coefs[1]
+        turn_differential_coef = self.coefs[2]
+        split_coef = self.coefs[3]
+        # Case where the enemy has been slain
+        if faction == self.faction and len(enemy_tiles) == 0:
+            return inf
+        elif faction != self.faction and len(ally_tiles) == 0:
+            return inf
+        humans_next_to_allies = []
+        humans_next_to_enemies = []
+        score = 0
+        for human in human_tiles:
+            try:
+                closest_ally = min([self.compute_distance(human,ally) for ally in ally_tiles if ally.nb > human.nb])
+            except:
+                closest_ally = inf
+            try:
+                closest_enemy = min([self.compute_distance(human,enemy) for enemy in enemy_tiles if enemy.nb > human.nb])
+            except:
+                closest_enemy = inf
+            if closest_ally == closest_enemy :
+                if faction == self.faction:
+                    humans_next_to_allies.append(human.nb)
+                else:
+                    humans_next_to_enemies.append(human.nb)
+            elif closest_ally < closest_enemy:
+                humans_next_to_allies.append(human.nb)
+            else:
+                humans_next_to_enemies.append(human.nb)
+        try:
+            score += eating_humans_coef*max([s for s in self.enumerate_sub_sums(humans_next_to_allies) if s < sum([a.nb for a in ally_tiles])])
+        except :
+            pass
+        try:
+            score -= eating_humans_coef*max([s for s in self.enumerate_sub_sums(humans_next_to_enemies) if s < sum([e.nb for e in enemy_tiles])])
+        except:
+            pass
+        if faction == self.faction:
+            score += faction_diff_coef*(sum(([a.nb for a in ally_tiles])) - sum(([e.nb for e in enemy_tiles])))
+            # score is better if the number of allies (respec. enemies) is higher (respec. lower) than the previous turn 
+            score += turn_differential_coef*(sum([a.nb for a in ally_tiles]) - sum([a.nb for a in previous_ally_tiles]))
+            score -= turn_differential_coef*(sum([e.nb for e in enemy_tiles]) - sum([e.nb for e in previous_enemy_tiles]))
+            # taking into account the number of splits
+            score -= split_coef*(len(ally_tiles))
+            score += split_coef*(len(enemy_tiles))
+        else:
+            #symetrical case
+            score -= faction_diff_coef*(sum(([a.nb for a in ally_tiles])) - sum(([e.nb for e in enemy_tiles])))
+            score -= turn_differential_coef*(sum([a.nb for a in ally_tiles]) - sum([a.nb for a in previous_ally_tiles]))
+            score += turn_differential_coef*(sum([e.nb for e in enemy_tiles]) - sum([e.nb for e in previous_enemy_tiles]))
+            score += split_coef*(len(ally_tiles))
+            score -= split_coef*(len(enemy_tiles))
+        return score
+
+
+    def enumerate_sub_sums(self, liste):
+        n = len(liste)
+        n_sub_sums = 2**n
+        for i in range(n_sub_sums):
+            combinaison = [(i // 2**k) % 2 for k in range(n)]
+        return combinaison
+
     def the_oracle(self,board):
         """
         returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
@@ -143,7 +209,7 @@ class GameClient():
         if len(our_tiles) == 0:
             return []
 
-        if len(human_tiles) > 0:
+        if len(human_tiles):
             troop_orders, score = self.best_troop_orders(self.faction, our_tiles, enemy_tiles, human_tiles)
 
             our_mvts = [[order[0],\
@@ -152,26 +218,45 @@ class GameClient():
                         order[0] + self.compute_steps(order[0], order[1], order[3], order[4])[0],\
                         order[1] + self.compute_steps(order[0], order[1], order[3], order[4])[1]] for order in troop_orders]
             return our_mvts
-        else : #TODO (strat quand il n'y a plus d'humains)
-            return []
+        else:
+            our_mvts = []
+            if len(our_tiles) > 1:
+                our_tiles = sorted(our_tiles, key = lambda tile : tile.nb, reverse=True)
+                biggest_ally = our_tiles[0]
+                for ally in our_tiles[1:]:
+                    dir_x, dir_y = self.compute_steps(ally.x, ally.y, biggest_ally.x, biggest_ally.y)
+                    our_mvts.append([ally.x, ally.y, ally.nb, ally.x + dir_x, ally.y + dir_y])
+                return our_mvts
+            else:
+                enemy_tiles = sorted(enemy_tiles, key = lambda tile : tile.nb)
+                smallest_enemy = enemy_tiles[0]
+                ally = our_tiles[0]
+                dir_x, dir_y = self.compute_steps(ally.x, ally.y, smallest_enemy.x, smallest_enemy.y)
+                our_mvts.append([ally.x, ally.y, ally.nb, ally.x + dir_x, ally.y + dir_y])
+                return our_mvts
 
 
-    def best_troop_orders(self, faction, ally_tiles, enemy_tiles, human_tiles, layer=1, alpha=-inf, beta=inf, return_troop_orders=True):
+    def best_troop_orders(self, faction, ally_tiles, enemy_tiles, human_tiles, layer=1, alpha=-inf, beta=inf, return_troop_orders=True,\
+                            previous_ally_tiles=None, previous_enemy_tiles=None):
         layer += 1
-        seperation_per_troop = 2
         best_troop_orders = []
-        
         if len(human_tiles) == 0 or len(ally_tiles) == 0 or len(enemy_tiles) == 0 or layer-1 >= self.depth_max:
-            heuristic = self.heuristic3(ally_tiles, enemy_tiles, human_tiles) if faction==self.faction\
-                        else self.heuristic3(enemy_tiles, ally_tiles, human_tiles)
+            heuristic = self.heuristic4(ally_tiles, enemy_tiles, human_tiles, faction, previous_ally_tiles, previous_enemy_tiles) if faction==self.faction\
+                        else self.heuristic4(enemy_tiles, ally_tiles, human_tiles, faction, previous_enemy_tiles, previous_ally_tiles)
             if return_troop_orders:
                 return best_troop_orders, heuristic
             else:
                 return heuristic
         else:
-            possibilities = self.compute_all_possibilities(ally_tiles, ally_tiles + enemy_tiles + human_tiles, seperation_per_troop)
-            enemy_possibilities = self.compute_all_possibilities(enemy_tiles, enemy_tiles + ally_tiles + human_tiles, seperation_per_troop)
-            print('Profondeur : {}\nNombre de possibilité : {}\nAlpha, beta : {},{}'.format(layer-1, len(possibilities)*len(enemy_possibilities),alpha,beta))
+            if len(ally_tiles) > 3 :
+                possibilities = self.compute_all_possibilities(ally_tiles, ally_tiles + enemy_tiles + human_tiles, seperation_per_troop=1)
+            else:
+                possibilities = self.compute_all_possibilities(ally_tiles, ally_tiles + enemy_tiles + human_tiles, seperation_per_troop=2)
+            if len(enemy_tiles) > 3:
+                enemy_possibilities = self.compute_all_possibilities(enemy_tiles, enemy_tiles + ally_tiles + human_tiles, seperation_per_troop=1)
+            else:
+                enemy_possibilities = self.compute_all_possibilities(enemy_tiles, enemy_tiles + ally_tiles + human_tiles, seperation_per_troop=2)
+            #print('Profondeur : {}\nNombre de possibilité : {}\nAlpha, beta : {},{}'.format(layer-1, len(possibilities)*len(enemy_possibilities),alpha,beta))
             score_per_possibility = [-inf if faction==self.faction else inf]*len(possibilities)
             ally_node_value = -inf if faction==self.faction else inf
             for (i,poss) in enumerate(possibilities):
@@ -179,9 +264,9 @@ class GameClient():
                 sub_beta = beta
                 minmax_score = inf if faction==self.faction else -inf
                 enemy_node_value = inf if faction==self.faction else -inf
-                poss_is_interesting = self.check_interesting_possibility(poss)
+                poss_is_interesting = self.check_interesting_possibility(poss, ally_tiles, enemy_tiles, human_tiles)
                 all_troop_static = len([1 for l in range(len(poss)) if poss[l][l] == ally_tiles[l].nb]) == len(ally_tiles)
-                if all_troop_static or not(poss_is_interesting):
+                if all_troop_static or not(poss_is_interesting) :
                     score_per_possibility[i] = -inf if faction==self.faction else inf
                 else:
                     for enemy_poss in enemy_possibilities:
@@ -197,6 +282,8 @@ class GameClient():
                                                            next_ally_tiles,\
                                                            next_enemy_tiles,\
                                                            next_human_tiles,\
+                                                           previous_ally_tiles = ally_tiles,\
+                                                           previous_enemy_tiles = enemy_tiles,\
                                                            layer=layer,\
                                                            alpha=sub_alpha,\
                                                            beta=sub_beta,\
@@ -206,6 +293,8 @@ class GameClient():
                                                            next_enemy_tiles,\
                                                            next_ally_tiles,\
                                                            next_human_tiles,\
+                                                           previous_ally_tiles = enemy_tiles,\
+                                                           previous_enemy_tiles = ally_tiles,\
                                                            layer=layer,\
                                                            alpha=sub_alpha,\
                                                            beta=sub_beta,\
@@ -232,6 +321,10 @@ class GameClient():
                         break
             if return_troop_orders:
                 best_case_scenario = possibilities[score_per_possibility.index(max(score_per_possibility))]
+                '''print('allies, enemies, humans : {}, {}, {}'.format([str(a)+':'+str(a.x)+','+str(a.y) for a in ally_tiles],\
+                                                                    [str(e)+':'+str(e.x)+','+str(e.y) for e in enemy_tiles],\
+                                                                    [str(h)+':'+str(h.x)+','+str(h.y) for h in human_tiles]))
+                print('best case scenario : {}'.format(best_case_scenario))'''
                 # Compute troop order from best case scenario
                 for (i,ally) in enumerate(ally_tiles):
                     for (j,target) in enumerate(ally_tiles + enemy_tiles + human_tiles):
@@ -257,7 +350,6 @@ class GameClient():
                     if poss[i][j] != 0:
                         dir_x, dir_y = self.compute_steps(ally.x, ally.y, target.x, target.y)
                         new_ally_tiles.append(board_tile(ally.x + dir_x, ally.y + dir_y, nb=poss[i][j], faction=faction))
-            #print('1 - checking conflicts after split')
             new_ally_tiles, new_enemy_tiles, new_human_tiles, conflict_occured = self.check_conflict_and_compute_battle(new_ally_tiles,\
                                                                                                                        new_enemy_tiles,\
                                                                                                                        new_human_tiles,\
@@ -271,7 +363,6 @@ class GameClient():
                     if enemy_poss[i][j] != 0:
                         dir_x, dir_y = self.compute_steps(enemy.x, enemy.y, target.x, target.y)
                         new_enemy_tiles.append(board_tile(enemy.x + dir_x, enemy.y + dir_y, nb=enemy_poss[i][j], faction=faction))
-            #print('2 - checking conflicts after split')
             new_enemy_tiles, new_ally_tiles, new_human_tiles, conflict_occured = self.check_conflict_and_compute_battle(new_enemy_tiles,\
                                                                                                                        new_ally_tiles,\
                                                                                                                        new_human_tiles,\
@@ -281,35 +372,11 @@ class GameClient():
         else:
             while not(conflict_occured):
                 if turn == faction:
-                    #print("===========================================================")
                     turn, new_ally_tiles, new_enemy_tiles, new_human_tiles, conflict_occured = \
                         self.steps_until_new_state(poss, turn, new_ally_tiles, new_enemy_tiles, new_human_tiles)
-                    '''print('Turn : {}\nposs dimentions : {},{}\nlen ally + enemy + human : {}+{}+{}={} and conflict_occured {}'.format(turn,\
-                                                                                                               len(poss),\
-                                                                                                               len(poss[0]),\
-                                                                                                               len(new_ally_tiles),\
-                                                                                                               len(new_enemy_tiles),\
-                                                                                                               len(new_human_tiles),\
-                                                                                                               len(new_ally_tiles)+\
-                                                                                                               len(new_enemy_tiles)+\
-                                                                                                               len(new_human_tiles),\
-                                                                                                               conflict_occured))
-                '''
                 else:
-                    #print("===========================================================")
                     turn, new_enemy_tiles, new_ally_tiles, new_human_tiles, conflict_occured = \
                         self.steps_until_new_state(enemy_poss, turn, new_enemy_tiles, new_ally_tiles, new_human_tiles)
-                    '''print('Turn : {}\nposs dimentions : {},{}\nlen ally + enemy + human : {}+{}+{}={} and conflict_occured {}'.format(turn,\
-                                                                                                               len(enemy_poss),\
-                                                                                                               len(enemy_poss[0]),\
-                                                                                                               len(new_enemy_tiles),\
-                                                                                                               len(new_ally_tiles),\
-                                                                                                               len(new_human_tiles),\
-                                                                                                               len(new_enemy_tiles)+\
-                                                                                                               len(new_ally_tiles)+\
-                                                                                                               len(new_human_tiles),\
-                                                                                                                conflict_occured))
-'''
         next_faction = "VAMP" if turn=="WERE" else "WERE"
         return next_faction, new_ally_tiles, new_enemy_tiles, new_human_tiles
 
@@ -319,21 +386,9 @@ class GameClient():
         temporary_new_ally_tiles = []
         for (i, ally) in enumerate(ally_tiles):
             for (j, target) in enumerate(ally_tiles + enemy_tiles + human_tiles):
-                '''print('Turn : {}\ni,j : {},{}\nposs dimentions : {},{}\nlen ally + enemy + human : {}+{}+{}={}'.format(turn,i,j,\
-                                                                                                                       len(poss),\
-                                                                                                                       len(poss[0]),\
-                                                                                                                       len(ally_tiles),\
-                                                                                                                       len(enemy_tiles),\
-                                                                                                                       len(human_tiles),\
-                                                                                                                       len(ally_tiles)+\
-                                                                                                                       len(enemy_tiles)+\
-                                                                                                                       len(human_tiles)))
-                '''
                 if poss[i][j] != 0:
                     dir_x, dir_y = self.compute_steps(ally.x, ally.y, target.x, target.y)
-                    #print('{},{} for {} at {},{} targeting {} at {},{}'.format(dir_x,dir_y,ally,ally.x,ally.y,target,target.x,target.y))
                     temporary_new_ally_tiles.append(board_tile(ally.x + dir_x, ally.y + dir_y, nb=poss[i][j], faction=turn))
-        #print('checking conflicts after movements')
         new_ally_tiles, new_enemy_tiles, new_human_tiles, conflict_occured = self.check_conflict_and_compute_battle(temporary_new_ally_tiles,\
                                                                                                                    enemy_tiles,\
                                                                                                                    human_tiles,\
@@ -383,8 +438,8 @@ class GameClient():
                         new_human_tiles.append(board_tile(human.x, human.y, nb=human.nb, faction="HUM"))
 
         return new_ally_tiles, new_enemy_tiles, new_human_tiles, conflict_occured
-
-
+        
+    
     def compute_all_possibilities(self, ally_tiles, target_tiles, seperation_per_troop=2):
         if len(ally_tiles) == 1:
             possibilities = []
@@ -405,6 +460,26 @@ class GameClient():
     def compute_orders_for_one_tile(self, ally, targets, seperation_per_troop=2):
         enumeration = []
         if seperation_per_troop == 2:
+            if ally.nb % 2 == 1:
+                for i in range(len(targets)):
+                    vector = [0]*len(targets)
+                    vector[i] = ally.nb
+                    enumeration.append(vector)
+                    for j in range(len(targets)):
+                        vector = [0]*len(targets)
+                        if i!=j:
+                            vector[i] = ally.nb // 2
+                            vector[j] = ally.nb - ally.nb // 2
+                            enumeration.append(vector)
+            else:
+                for i in range(len(targets)):
+                    for j in range(len(targets)):
+                        if j >= i:
+                            vector = [0]*len(targets)
+                            vector[i] = ally.nb // 2
+                            vector[j] = ally.nb // 2
+                            enumeration.append(vector)
+            '''
             for k in range(ally.nb//2 if ally.nb%2==0 else ally.nb//2 + 1, ally.nb+1):
                 for i in range(len(targets)):
                     if k != ally.nb :
@@ -426,6 +501,7 @@ class GameClient():
                        vector = [0]*len(targets)
                        vector[i] = k
                        enumeration.append(vector)
+            '''
         elif seperation_per_troop == 1:
             for i in range(len(targets)):
                 vector = [0]*len(targets)
@@ -433,14 +509,21 @@ class GameClient():
                 enumeration.append(vector)
         return enumeration
 
-    def check_interesting_possibility(self, poss):
+    def check_interesting_possibility(self, poss, ally_tiles, enemy_tiles, human_tiles):
+        ''' Return True if the given possibility is an interesting one
+        '''
+        # Check that the targets are indeed outnumbered
+        for (i,ally) in enumerate(ally_tiles):
+            for (j,target) in enumerate(ally_tiles + enemy_tiles + human_tiles):
+                if poss[i][j] != 0:
+                    if j >= len(ally_tiles) and poss[i][j] <= target.nb:
+                        return False
+        # Check that not all the allies target each other
         poss_matrix = np.array(poss)
-        ally_targeting_matrix = poss_matrix[0:len(poss_matrix),0:len(poss_matrix)].copy()
         enemy_and_human_targeting_matrix = poss_matrix[0:len(poss_matrix),len(poss_matrix):len(poss_matrix[0])].copy()
-        targeting_all_allies = np.linalg.matrix_rank(ally_targeting_matrix) == len(ally_targeting_matrix)
         a,b = enemy_and_human_targeting_matrix.shape
         at_least_one_non_ally_target =  not((enemy_and_human_targeting_matrix == np.zeros((a,b))).all())
-        return at_least_one_non_ally_target or not(targeting_all_allies)
+        return at_least_one_non_ally_target
 
     def compute_distance(self, tile1, tile2):
         return max(abs(tile1.x-tile2.x), abs(tile1.y-tile2.y))
