@@ -1,4 +1,7 @@
 ./offline_tests/__pycache__/*
 offline_tests/__pycache__
 *.pyc
+./offline_tests/__pycache__
+./__pycache/
+.idea/
 

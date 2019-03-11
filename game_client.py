@@ -1,29 +1,39 @@
 from server_con import *
 from board_tile import *
-from random import random
+from decider import *
 from board import Board
+from roxxor import *
+import time
+
+# auxiliary files for roxxor strategy
+from world_rep import get_all_paths, get_potential_targets, dist
+from orders_tree import order_node
 
     
 class GameClient():
     def __init__(self):
+        self.__decider = Decider()
         self.start()
 
     def start_connection(self):
         self.__connection = ServerCon(self)
         self.__connection.connect_to_server("127.0.0.1", 6666)
-        self.__connection.send_nme("test")
+        self.__connection.send_nme(self.__decider.get_name())
         while self.__connection.is_connected():
             self.__connection.listen()
-        
+
     def start(self):
         '''
         reset for a new game
         '''
-        
-        self.__board = None
+        self.__board = [[]]
+        self.__n = 0
+        self.__m = 0
         self.__startingHome = []
-        
-            
+
+    def give_decider(self, decider):
+        self.__decider = decider
+
     def callback_set(self, n, m):
         '''
         All callbacks from the server, receiving formated input
@@ -42,11 +52,16 @@ class GameClient():
         return True
 
     def callback_upd(self, changesInfosList):
-        update_success =  self.update_map(changesInfosList)
+        update_success = self.update_map(changesInfosList)
         if update_success:
-            moves = self.decide()
-            print(self.__board)
+            print("Waiting ...")
+            time.sleep(.5)
+            print("Computing ...")
+            moves = self._decide()
+            print("Computing done.")
             self.__connection.send_mov(moves)
+        else:
+            print("Failed update, did not decide.")
         return update_success
 
     def callback_map(self, tilesInfosList):
@@ -88,37 +103,18 @@ class GameClient():
                 print("Added {} werewolves.".format(nWere))
             else:
                 self.__board.tile(x,y).nb = 0
-                self.__board.tile(x,y).faction.EMPT
+                self.__board.tile(x,y).faction = Faction.EMPT
                 print("Emptied tile.")
         print(self.__board)
         return True        
+
         
-    def decide(self):
-        """
-        returns a list of (x,y,n,x',y'), stating that we want to move n units form tile (x,y) to (x',y')
-        """
-        our_tiles = self.__board.get_tiles_of_interest()[BoardTile.ally_faction]
-        our_tile = our_tiles[0]
-        x = our_tile.x
-        y = our_tile.y
-        nb = our_tile.nb
-        
-        human_tiles = self.__board.get_tiles_of_interest()[Faction.HUM]
-        
-        min_dist = self.__board.height + self.__board.width
-        target_x, target_y = (0,0)
-        for tile in human_tiles:
-            dist = max(abs(tile.x-our_tile.x), abs(tile.y-our_tile.y))
-            if dist < min_dist and tile.nb < nb:
-                min_dist = dist
-                target_x, target_y = (tile.x, tile.y)
-        
-        dir_x = 1 if target_x>our_tile.x else -1 if target_x<our_tile.x else 0
-        dir_y = 1 if target_y>our_tile.y else -1 if target_y<our_tile.y else 0
-        
-        return [[x,y,nb, our_tile.x+dir_x, our_tile.y+dir_y]]   
-        
+    def _decide(self):
+        return self.__decider.decide(self.__board)
+
 
 if __name__ == '__main__':
+    import closest
     game_client = GameClient()
+    game_client.give_decider(roxxor())
     game_client.start_connection()

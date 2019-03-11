@@ -26,16 +26,18 @@ class GameServer():
         self.nb_tours = 0
         
         print("New game ! (#{})".format(self.nb_games))
-        self.__n = 5
-        self.__m = 9
-
-        #self.__board = [[board_tile(x,y,randint(1,5),"HUM") if random()<P_hum else board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
+        self.__n = 15
+        self.__m = 29
+        # self.__board = [[board_tile(x,y,randint(1,10),"HUM") if random()<P_hum else board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
         self.__board = [[board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
-        human_coords = [(randint(0,self.__n-1),randint(0,self.__m-1)) for i in range(2)]
-        for (x,y) in human_coords:
-            self.__board[x][y] = board_tile(x,y,randint(1,5), "HUM")
-        self.__board[self.__n // 2 - 1][self.__m // 2 - 1]=board_tile(self.__n // 2 - 1,self.__m // 2 - 1,7,"WERE")
-        self.__board[self.__n // 2 + 1][self.__m // 2 - 1]=board_tile(self.__n // 2 + 1,self.__m // 2 - 1,7,"VAMP")
+        self.__board[0][0]=board_tile(0,0,10,"WERE")
+        self.__board[self.__n-1][self.__m-1]=board_tile(self.__n-1,self.__m-1,10,"VAMP")
+        self.__board[0][28]=board_tile(0,28,2,"HUM")
+        self.__board[14][0]=board_tile(14,0,2,"HUM")
+        self.__board[3][10]=board_tile(3,10,4,"HUM")
+        self.__board[11][18]=board_tile(11,18,4,"HUM")
+        self.__board[8][14]=board_tile(8,14,20,"HUM")
+
         self.p1.new_game("VAMP", self.__n, self.__m)
         self.p2.new_game("WERE", self.__n, self.__m)
         
@@ -47,15 +49,16 @@ class GameServer():
             print("Max decision time for p2 ({}) : {:.2f}s".format(self.p2.faction, self.p2.max_time))
         
     def print_board(self):
+        sep=""
         print("\t",end="")
         for j in range(self.__m):
-            print("{}\t".format(j),end="")
+            print("{}{}".format(j,sep),end="")
         print()
         for i in range(self.__n):
-            print("{}\t".format(i),end="")
+            print("{}{}".format(i,sep),end="")
             for j in range(self.__m):
                 print(self.__board[i][j],end="")
-                print("\t",end="")
+                print(sep,end="")
             print("\n")
     
 
