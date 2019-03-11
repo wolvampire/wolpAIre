@@ -117,6 +117,7 @@ if __name__ == '__main__':
     import closest
     import greedy
     import roxxor
+    import oracle
 
     if len(sys.argv) <= 1:
         print("This program excepts an algorithms as argument (available : roxxor, greedy).")
@@ -126,6 +127,8 @@ if __name__ == '__main__':
         game_client.give_decider(roxxor.roxxor())
     elif sys.argv[1] == 'greedy':
         game_client.give_decider(greedy.GreedyDecider())
+    elif sys.argv[1] == 'oracle':
+        game_client.give_decider(oracle.OracleDecider())
     else:
         print("Invalid algorithm {}, aborting.".format(sys.argv[1]))
     game_client.start_connection()
