@@ -1,5 +1,5 @@
 from board_tile import BoardTile
-
+from math import inf
 from decider import *
 
 
@@ -22,12 +22,11 @@ class OracleDecider(Decider):
         (i.e. win, loss, no more humans or maximum depth of search reached), returning the heuristic of the foreseen board.
         Then, with the returned values, the alpha-beta algoriths helps reducing the number of possibilities to explore.
         """
-        print(board)
         our_tiles = board.get_tiles_of_interest()[Relation.ALLY]
         enemy_tiles = board.get_tiles_of_interest()[Relation.ENEMY]
         human_tiles = board.get_tiles_of_interest()[Faction.HUM]
         
-
+        print('Je suis {}'.format(BoardTile.ally_faction))
         if len(our_tiles) == 0:
             return []
 
@@ -60,7 +59,7 @@ class OracleDecider(Decider):
                 our_mvts.append([ally.x, ally.y, ally.nb, ally.x + dir_x, ally.y + dir_y])
                 return our_mvts
 
-    def best_troop_orders(self, faction, ally_tiles, enemy_tiles, human_tiles, layer=1, alpha=-float('inf'), beta=float('inf'), return_troop_orders=True,\
+    def best_troop_orders(self, faction, ally_tiles, enemy_tiles, human_tiles, layer=1, alpha=-inf, beta=inf, return_troop_orders=True,\
                             previous_ally_tiles=None, previous_enemy_tiles=None):
         '''
         Recursive fonction that implements the tree-search and the alpha-beta optimization
@@ -80,8 +79,8 @@ class OracleDecider(Decider):
             possibilities = self.compute_all_possibilities(ally_tiles, ally_tiles + enemy_tiles + human_tiles, seperation_per_troop=1)
             enemy_possibilities = self.compute_all_possibilities(enemy_tiles, enemy_tiles + ally_tiles + human_tiles, seperation_per_troop=1)
             #initializing the list of score for the possibilities and the node value for the alpha-beta optimization
-            score_per_possibility = [-float('inf') if faction==BoardTile.ally_faction else float('inf')]*len(possibilities)
-            ally_node_value = -float('inf') if faction==BoardTile.ally_faction else float('inf')
+            score_per_possibility = [-inf if faction==BoardTile.ally_faction else inf]*len(possibilities)
+            ally_node_value = -inf if faction==BoardTile.ally_faction else inf
             for (i,poss) in enumerate(possibilities):
                 #Since we loop among the enemy possibilities for each ally possibility, we have to adapt the alpha-beta algorithm
                 #so that the values for the minimizer and maximizer nodes do not mix up. Thus the sub_alpha and sub_beta.
@@ -91,13 +90,13 @@ class OracleDecider(Decider):
                 #The score to minimize (maximize) is initialized to infinity if the function is called on the ally's turn
                 #(-infinity for the enemy's turn)
                 #Note that this initialization is for the inner loop below : the enemy will want to minimize the score
-                minmax_score = float('inf') if faction==BoardTile.ally_faction else -float('inf')
-                enemy_node_value = float('inf') if faction==BoardTile.ally_faction else -float('inf')
+                minmax_score = inf if faction==BoardTile.ally_faction else -inf
+                enemy_node_value = inf if faction==BoardTile.ally_faction else -inf
                 #checks the usefulness of a possibility so that the algorithm doesn't look for useless subtrees
                 poss_is_interesting = self.check_interesting_possibility(poss, ally_tiles, enemy_tiles, human_tiles)
                 all_troop_static = len([1 for l in range(len(poss)) if poss[l][l] == ally_tiles[l].nb]) == len(ally_tiles)
                 if all_troop_static or not(poss_is_interesting) :
-                    score_per_possibility[i] = -float('inf') if faction==BoardTile.ally_faction else float('inf')
+                    score_per_possibility[i] = -inf if faction==BoardTile.ally_faction else inf
                 else:
                     for (j,enemy_poss) in enumerate(enemy_possibilities):
                         #Given the targets for each ally and enemy, the function below computes the future turns until
@@ -135,8 +134,8 @@ class OracleDecider(Decider):
                         #we are looping through the enemy's possibilities. It is maximized otherwise for the symetrical reason.
                         if faction == BoardTile.ally_faction:
                             minmax_score = min(score,minmax_score)
-                            if layer == 2:
-                                print('minimax {} when score {} for poss {} and enemy poss {}'.format(minmax_score, score, i, j))
+                            '''if layer == 2:
+                                print('minimax {} when score {} for poss {} and enemy poss {}'.format(minmax_score, score, i, j))'''
                             enemy_node_value = min(enemy_node_value, score)
                             sub_beta = min(sub_beta,enemy_node_value)
                         else:
@@ -356,9 +355,9 @@ class OracleDecider(Decider):
         split_coef = self.coefs[3]
         # Case where the enemy has been slain
         if faction == BoardTile.ally_faction and len(enemy_tiles) == 0:
-            return float('inf')
+            return inf
         elif faction != BoardTile.ally_faction and len(ally_tiles) == 0:
-            return float('inf')
+            return inf
         humans_next_to_allies = []
         humans_next_to_enemies = []
         score = 0
@@ -366,11 +365,11 @@ class OracleDecider(Decider):
             try:
                 closest_ally = min([self.compute_distance(human,ally) for ally in ally_tiles if ally.nb > human.nb])
             except:
-                closest_ally = float('inf')
+                closest_ally = inf
             try:
                 closest_enemy = min([self.compute_distance(human,enemy) for enemy in enemy_tiles if enemy.nb > human.nb])
             except:
-                closest_enemy = float('inf')
+                closest_enemy = inf
             if closest_ally == closest_enemy :
                 if faction == BoardTile.ally_faction:
                     humans_next_to_allies.append(human.nb)
