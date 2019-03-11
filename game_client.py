@@ -15,9 +15,9 @@ class GameClient():
         self.__decider = Decider()
         self.start()
 
-    def start_connection(self):
+    def start_connection(self, address, port):
         self.__connection = ServerCon(self)
-        self.__connection.connect_to_server("127.0.0.1", 6666)
+        self.__connection.connect_to_server(address, port)
         self.__connection.send_nme(self.__decider.get_name())
         while self.__connection.is_connected():
             self.__connection.listen()
@@ -128,4 +128,9 @@ if __name__ == '__main__':
         game_client.give_decider(greedy.GreedyDecider())
     else:
         print("Invalid algorithm {}, aborting.".format(sys.argv[1]))
-    game_client.start_connection()
+    address = "127.0.0.1"
+    port = 6666
+    if len(sys.argv) >= 4:
+        address = sys.argv[2]
+        port = int(sys.argv[3])
+    game_client.start_connection(address, port)
