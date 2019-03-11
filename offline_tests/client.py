@@ -34,7 +34,7 @@ class GameClient():
         self.decision_fun = 0
         self.strat = strat
         self.coefs = coefs
-        self.depth_max =  5 # max depth when exploring the tree of possibilities
+        self.depth_max = 8 # max depth when exploring the tree of possibilities
         if strat=="greed":
             self.decision_fun = self.greed_move
         elif strat=="random":
@@ -220,7 +220,7 @@ class GameClient():
         #strategy if there are some humans
         if len(human_tiles) > 0:
             troop_orders, score = self.best_troop_orders(self.faction, our_tiles, enemy_tiles, human_tiles)
-
+            print('move with score {}'.format(score))
             our_mvts = [[order[0],\
                         order[1],\
                         order[2],\
