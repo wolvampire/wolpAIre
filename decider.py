@@ -76,7 +76,7 @@ class Decider():
                 print("Rule 4 broken : in the move {} the pawns don't go to an adjacent tile".format(move))
                 rslt = False
 
-        #Rule 5: Source and Target tiles are not the same
+        #Rule 5: Target tiles are not in any of the source tiles sent in the moves
         sources_list = []
         for move in moves:
             sources_list.append((move[0], move[1]))
