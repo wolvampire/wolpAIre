@@ -34,7 +34,7 @@ class GameClient():
         self.decision_fun = 0
         self.strat = strat
         self.coefs = coefs
-        self.depth_max = 3  # max depth when exploring the tree of possibilities
+        self.depth_max =  5 # max depth when exploring the tree of possibilities
         if strat=="greed":
             self.decision_fun = self.greed_move
         elif strat=="random":
