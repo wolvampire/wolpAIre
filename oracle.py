@@ -1,5 +1,5 @@
 from board_tile import BoardTile
-from math import inf
+from math import inf, ceil
 from decider import *
 
 
@@ -25,6 +25,7 @@ class OracleDecider(Decider):
         enemy_tiles = board.get_tiles_of_interest()[Relation.ENEMY]
         human_tiles = board.get_tiles_of_interest()[Faction.HUM]
         
+        self.depth_max = self.set_max_depth(board, len(human_tiles))
 
         if len(our_tiles) == 0:
             return []
@@ -37,8 +38,7 @@ class OracleDecider(Decider):
                          order[1], \
                          order[2], \
                          order[0] + self.compute_steps(order[0], order[1], order[3], order[4])[0], \
-                         order[1] + self.compute_steps(order[0], order[1], order[3], order[4])[1]] for order in
-                        troop_orders]
+                         order[1] + self.compute_steps(order[0], order[1], order[3], order[4])[1]] for order in troop_orders]
             return our_mvts
         # simple strategy if there are no humans left
         else:
@@ -70,10 +70,8 @@ class OracleDecider(Decider):
         best_troop_orders = []
         # terminal case
         if len(human_tiles) == 0 or len(ally_tiles) == 0 or len(enemy_tiles) == 0 or layer - 1 >= self.depth_max:
-            heuristic = self.heuristic(ally_tiles, enemy_tiles, human_tiles, faction, previous_ally_tiles,
-                                       previous_enemy_tiles) if faction == BoardTile.ally_faction \
-                else self.heuristic(enemy_tiles, ally_tiles, human_tiles, faction, previous_enemy_tiles,
-                                    previous_ally_tiles)
+            heuristic = self.heuristic(ally_tiles, enemy_tiles, human_tiles, faction, previous_ally_tiles,previous_enemy_tiles) if faction == BoardTile.ally_faction \
+                        else self.heuristic(enemy_tiles, ally_tiles, human_tiles, faction, previous_enemy_tiles,previous_ally_tiles)
             if return_troop_orders:
                 return best_troop_orders, heuristic
             else:
@@ -102,6 +100,8 @@ class OracleDecider(Decider):
                 # checks the usefulness of a possibility so that the algorithm doesn't look for useless subtrees
                 poss_is_interesting = self.check_interesting_possibility(poss, ally_tiles, enemy_tiles, human_tiles)
                 if not (poss_is_interesting):
+                    if layer == 2:
+                        print('not interesting {}'.format(i))
                     score_per_possibility[i] = -float('inf') if faction == BoardTile.ally_faction else float('inf')
                 else:
                     for enemy_poss in enemy_possibilities:
@@ -152,6 +152,8 @@ class OracleDecider(Decider):
                             break
                     # In the outer loop, the score is maximized if the function has been called on the ally's turn because
                     # we are looping through the ally's possibilities. It is maximized otherwise for the symetrical reason.
+                    if layer == 2:
+                        print('interesting {}'.format(minmax_score))
                     score_per_possibility[i] = minmax_score
                     if faction == BoardTile.ally_faction:
                         ally_node_value = max(ally_node_value, minmax_score)
@@ -162,6 +164,8 @@ class OracleDecider(Decider):
                     # alpha-beta pruning
                     if alpha >= beta:
                         break
+                if layer == 2:
+                    print('possibilité {} avec score {}'.format(i,score_per_possibility[i]))
             if not (return_troop_orders):
                 return max(score_per_possibility) if faction == BoardTile.ally_faction else min(score_per_possibility)
             else:
@@ -355,16 +359,34 @@ class OracleDecider(Decider):
         dir_y = 1 if y_target > y else -1 if y_target < y else 0
         return dir_x, dir_y
 
+    def set_max_depth(self, board, n_human):
+        # below : lines represent square boards with size [2,4,6,8,10]
+        #         columns represent boards with number of human tiles [3,6,9,12,15]
+        depths_per_board_situation = np.array([[8., 8., 8., 8., 8.],\
+                                               [8., 8., 8., 5., 6.],\
+                                               [8., 8., 8., 3., 4.],\
+                                               [8., 8., 8., 4., 2.],\
+                                               [8., 8., 5., 4., 2.]])
+        board_size_for_depth = ceil(np.sqrt(board.width*board.height))
+        board_size_for_depth -= board_size_for_depth % 2
+        board_size_for_depth = board_size_for_depth + 1 if board_size_for_depth % 2 == 1 else board_size_for_depth
+        board_size_for_depth = min(10, board_size_for_depth)
+        n_human_tiles_for_depth = n_human // 3 * 3
+        n_human_tiles_for_depth = n_human_tiles_for_depth if n_human_tiles_for_depth % 3 == 0 else n_human_tiles_for_depth + 3
+        n_human_tiles_for_depth = min(15, n_human_tiles_for_depth)
+        return depths_per_board_situation[board_size_for_depth//2 - 1][n_human_tiles_for_depth//3 - 1]
+        
+
     def heuristic(self, ally_tiles, enemy_tiles, human_tiles, faction, previous_ally_tiles, previous_enemy_tiles):
         eating_humans_coef = self.coefs[0]
         faction_diff_coef = self.coefs[1]
         turn_differential_coef = self.coefs[2]
         split_coef = self.coefs[3]
         # Case where the enemy has been slain
-        if len(enemy_tiles) == 0:
+        '''if len(enemy_tiles) == 0:
             return float('inf')
         elif len(ally_tiles) == 0:
-            return -float('inf')
+            return -float('inf')'''
         humans_next_to_allies = []
         humans_next_to_enemies = []
         score = 0
