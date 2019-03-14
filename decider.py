@@ -1,24 +1,55 @@
+import multiprocessing as mp
+
 from board import *
 from board_tile import *
 
+
+TIME_OUT = 1.8
 
 class Decider():
     def __init__(self):
         self._name = None
         self._board = None
+        self.__moves = []
+        self._timed_out = False
 
     def get_name(self):
         return self._name
 
-    def decide(self, board):
+    def decide(self, board, no_process = False):
         '''
         Returns a list of moves, in the shape (x_origin, y_origin, number, x_tar, y_tar)
         '''
         self._board = board
-        ret = self._decide(self._board)
-        if not self.check_move(ret):
-            print("Warning : the move is not valid !")
-        return ret
+        if no_process:
+            return self._decide(board)
+        import greedy
+        default_decider = greedy.GreedyDecider()
+        self.__moves = []
+        queue = mp.Queue()
+        self._timed_out = False
+        print("Starting process")
+        process = mp.Process(target=self.call__, args=(queue,))
+        process.start()
+        print("Process started ...")
+        process.join(TIME_OUT)
+        if process.is_alive():#We got timed out
+            print("##TIME OUT## : Warning, time out detected, stopping process ...")
+            process.terminate()
+            self._timed_out = True
+            process.join()
+            print("##TIME OUT## : Proces stopped, engaging greedy.")
+            self.__moves = default_decider.decide(self._board, True)
+            print("##TIME OUT## : Greedy done.")
+        else:
+            self.__moves = queue.get()
+            print("Process exited successfully.")
+        if not self.check_move(self.__moves):
+            print("##INVALID MOVE## : Warning : the move is not valid ! Starting greedy instead.")
+            self.__moves = default_decider.decide(self._board, True)
+            if not self.check_move(self.__moves):
+                print("##INVALID MOVE## : Error : Greedy also failed, good luck with that !")
+        return self.__moves
 
     def _decide(self, board):
         print("THIS SHOULD NOT BE CALLLED WHAT HAVE YOU DONE")
@@ -27,12 +58,18 @@ class Decider():
         '''
         return [[]]
 
+    def call__(self, queue):
+        moves = self._decide(self._board)
+        print("Inside __call__, len is : {}".format(len(moves)))
+        queue.put(moves)
+        pass
+
     def check_move(self, moves):
         rslt = True
         # Rule 1 : At least one move is
         if len(moves) == 0:
             print("Rule 1 broken : There is no move.")
-            rlst = False
+            rslt = False
         # Check message integrity
         for move in moves:
             if len(move) != 5:

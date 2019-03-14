@@ -6,6 +6,7 @@ from decider import *
 
 class GreedyDecider(Decider):
     def __init__(self):
+        super().__init__()
         self._name = "NEED MONNEEEEYYY"
 
     def _decide(self, board):
