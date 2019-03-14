@@ -27,7 +27,6 @@ class Decider():
         default_decider = greedy.GreedyDecider()
         self.__moves = []
         queue = mp.Queue()
-        self._timed_out = False
         print("Starting process")
         process = mp.Process(target=self.call__, args=(queue,))
         process.start()
