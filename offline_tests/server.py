@@ -9,7 +9,7 @@ from board_tile import board_tile
 
 
 class GameServer():
-    def __init__(self, p1, p2):
+    def __init__(self, p1, p2, n_humans, side_board):
         self.__board = [[]]
         self.__n = 0
         self.__m = 0
@@ -17,6 +17,8 @@ class GameServer():
         self.p2 = p2
         self.nb_games = 0
         self.nb_tours = 0
+        self.n_humans = n_humans
+        self.side_board = side_board
         
     def get_board(self):
         return self.__board
@@ -26,16 +28,19 @@ class GameServer():
         self.nb_tours = 0
         
         print("New game ! (#{})".format(self.nb_games))
-        self.__n = 10
-        self.__m = 8
+        self.__n = self.side_board
+        self.__m = self.side_board
 
         #self.__board = [[board_tile(x,y,randint(1,5),"HUM") if random()<P_hum else board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
         self.__board = [[board_tile(x,y) for y in range(self.__m)] for x in range(self.__n)]
-        human_coords = [(randint(0,self.__n-1),randint(0,self.__m-1)) for i in range(5)]
+        human_coords = [(randint(0,self.__n-1),randint(0,self.__m-1)) for i in range(self.n_humans // 2)]
         for (x,y) in human_coords:
-            self.__board[x][y] = board_tile(x,y,randint(1,5), "HUM")
-        self.__board[self.__n // 2 - 1][self.__m // 2 - 1]=board_tile(self.__n // 2 - 1,self.__m // 2 - 1,7,"WERE")
-        self.__board[self.__n // 2 + 1][self.__m // 2 - 1]=board_tile(self.__n // 2 + 1,self.__m // 2 - 1,7,"VAMP")
+            nb_h = randint(1,12)
+            self.__board[x][y] = board_tile(x,y,nb_h, "HUM")
+            self.__board[y][x] = board_tile(y,x,nb_h, "HUM")
+
+        self.__board[1][self.__m - 2]=board_tile(1,self.__m - 2,4,"WERE")
+        self.__board[self.__n - 2][1]=board_tile(self.__n - 2,1,4,"VAMP")
         self.p1.new_game("VAMP", self.__n, self.__m)
         self.p2.new_game("WERE", self.__n, self.__m)
         

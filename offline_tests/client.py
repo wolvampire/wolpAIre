@@ -29,12 +29,12 @@ def get_board_from_tiles(m, n, ally_tiles, enemy_tiles, human_tiles):
         
         
 class GameClient():
-    def __init__(self, strat, coefs=[1,1,1,1]):
+    def __init__(self, strat, coefs=[1,1,1,1], depth=4):
         self.score = 0  # nb of games won
         self.decision_fun = 0
         self.strat = strat
         self.coefs = coefs
-        self.depth_max = 8 # max depth when exploring the tree of possibilities
+        self.depth_max = depth # max depth when exploring the tree of possibilities
         if strat=="greed":
             self.decision_fun = self.greed_move
         elif strat=="random":
@@ -141,11 +141,12 @@ class GameClient():
         faction_diff_coef = self.coefs[1]
         turn_differential_coef = self.coefs[2]
         split_coef = self.coefs[3]
-        # Case where the enemy has been slain
-        if faction == self.faction and len(enemy_tiles) == 0:
-            return inf
-        elif faction != self.faction and len(ally_tiles) == 0:
-            return inf
+        # Case where the enemy or the ally has been slain.
+        '''if len(ally_tiles) == 0:
+            return -inf
+        elif len(enemy_tiles) == 0:
+            return inf'''
+
         humans_next_to_allies = []
         humans_next_to_enemies = []
         score = 0
@@ -175,21 +176,13 @@ class GameClient():
             score -= eating_humans_coef*max([s for s in self.enumerate_sub_sums(humans_next_to_enemies) if s < sum([e.nb for e in enemy_tiles])])
         except:
             pass
-        if faction == self.faction:
-            score += faction_diff_coef*(sum(([a.nb for a in ally_tiles])) - sum(([e.nb for e in enemy_tiles])))
-            # score is better if the number of allies (respec. enemies) is higher (respec. lower) than the previous turn 
-            score += turn_differential_coef*(sum([a.nb for a in ally_tiles]) - sum([a.nb for a in previous_ally_tiles]))
-            score -= turn_differential_coef*(sum([e.nb for e in enemy_tiles]) - sum([e.nb for e in previous_enemy_tiles]))
-            # taking into account the number of splits
-            score -= split_coef*(len(ally_tiles))
-            score += split_coef*(len(enemy_tiles))
-        else:
-            #symetrical case
-            score -= faction_diff_coef*(sum(([a.nb for a in ally_tiles])) - sum(([e.nb for e in enemy_tiles])))
-            score -= turn_differential_coef*(sum([a.nb for a in ally_tiles]) - sum([a.nb for a in previous_ally_tiles]))
-            score += turn_differential_coef*(sum([e.nb for e in enemy_tiles]) - sum([e.nb for e in previous_enemy_tiles]))
-            score += split_coef*(len(ally_tiles))
-            score -= split_coef*(len(enemy_tiles))
+        score += faction_diff_coef*(sum(([a.nb for a in ally_tiles])) - sum(([e.nb for e in enemy_tiles])))
+        # score is better if the number of allies (respec. enemies) is higher (respec. lower) than the previous turn 
+        score += turn_differential_coef*(sum([a.nb for a in ally_tiles]) - sum([a.nb for a in previous_ally_tiles]))
+        score -= turn_differential_coef*(sum([e.nb for e in enemy_tiles]) - sum([e.nb for e in previous_enemy_tiles]))
+        # taking into account the number of splits
+        score -= split_coef*(len(ally_tiles))
+        score += split_coef*(len(enemy_tiles))
         return score
 
 
@@ -199,6 +192,23 @@ class GameClient():
         for i in range(n_sub_sums):
             combinaison = [(i // 2**k) % 2 for k in range(n)]
         return combinaison
+
+    def set_max_depth(self, board, n_human):
+        # below : lines represent square boards with size [2,4,6,8,10]
+        #         columns represent boards with number of human tiles [3,6,9,12,15]
+        depths_per_board_situation = np.array([[8., 8., 8., 8., 8.],\
+                                               [8., 8., 8., 5., 6.],\
+                                               [8., 8., 8., 3., 4.],\
+                                               [8., 8., 8., 4., 2.],\
+                                               [8., 8., 5., 4., 2.]])
+        board_size_for_depth = ceil(np.sqrt(board.width*board.height))
+        board_size_for_depth -= board_size_for_depth % 2
+        board_size_for_depth = board_size_for_depth + 1 if board_size_for_depth % 2 == 1 else board_size_for_depth
+        board_size_for_depth = min(10, board_size_for_depth)
+        n_human_tiles_for_depth = n_human // 3 * 3
+        n_human_tiles_for_depth = n_human_tiles_for_depth if n_human_tiles_for_depth % 3 == 0 else n_human_tiles_for_depth + 3
+        n_human_tiles_for_depth = min(15, n_human_tiles_for_depth)
+        return depths_per_board_situation[board_size_for_depth//2][n_human_tiles_for_depth//3]
 
     def the_oracle(self,board):
         """
@@ -214,13 +224,15 @@ class GameClient():
         """
         our_tiles, enemy_tiles, human_tiles = self.get_tiles_of_interest(board)
 
+        
+        self.depth_max = self.set_max_depth(board, len(human_tiles))
+
         if len(our_tiles) == 0:
             return []
-
+        start_time = time()
         #strategy if there are some humans
         if len(human_tiles) > 0:
-            troop_orders, score = self.best_troop_orders(self.faction, our_tiles, enemy_tiles, human_tiles)
-            print('move with score {}'.format(score))
+            troop_orders, score = self.best_troop_orders(self.faction, our_tiles, enemy_tiles, human_tiles, start_time=time())
             our_mvts = [[order[0],\
                         order[1],\
                         order[2],\
@@ -247,14 +259,14 @@ class GameClient():
 
 
     def best_troop_orders(self, faction, ally_tiles, enemy_tiles, human_tiles, layer=1, alpha=-inf, beta=inf, return_troop_orders=True,\
-                            previous_ally_tiles=None, previous_enemy_tiles=None):
+                            previous_ally_tiles=None, previous_enemy_tiles=None, start_time=time()):
         '''
         Recursive fonction that implements the tree-search and the alpha-beta optimization
         '''
         layer += 1
         best_troop_orders = []
         #terminal case
-        if len(human_tiles) == 0 or len(ally_tiles) == 0 or len(enemy_tiles) == 0 or layer-1 >= self.depth_max:
+        if len(human_tiles) == 0 or len(ally_tiles) == 0 or len(enemy_tiles) == 0 or layer-1 >= self.depth_max or time()-start_time > 2.5:
             heuristic = self.heuristic4(ally_tiles, enemy_tiles, human_tiles, faction, previous_ally_tiles, previous_enemy_tiles) if faction==self.faction\
                         else self.heuristic4(enemy_tiles, ally_tiles, human_tiles, faction, previous_enemy_tiles, previous_ally_tiles)
             if return_troop_orders:
@@ -281,42 +293,47 @@ class GameClient():
                 enemy_node_value = inf if faction==self.faction else -inf
                 #checks the usefulness of a possibility so that the algorithm doesn't look for useless subtrees
                 poss_is_interesting = self.check_interesting_possibility(poss, ally_tiles, enemy_tiles, human_tiles)
-                all_troop_static = len([1 for l in range(len(poss)) if poss[l][l] == ally_tiles[l].nb]) == len(ally_tiles)
-                if all_troop_static or not(poss_is_interesting) :
+                if not(poss_is_interesting) :
                     score_per_possibility[i] = -inf if faction==self.faction else inf
                 else:
                     for enemy_poss in enemy_possibilities:
-                        #Given the targets for each ally and enemy, the function below computes the future turns until
-                        #two or more tiles interact. It returns the resulting board situation.
-                        next_faction, next_ally_tiles, next_enemy_tiles, next_human_tiles = self.compute_next_state_board(poss,\
-                                                                                                                          enemy_poss,\
-                                                                                                                          faction,\
-                                                                                                                          ally_tiles,\
-                                                                                                                          enemy_tiles,\
-                                                                                                                          human_tiles) 
-                        #Depending on who is to play next, we call the recursive function with the correct arguments.
-                        if next_faction == faction:
-                            score = self.best_troop_orders(next_faction,\
-                                                           next_ally_tiles,\
-                                                           next_enemy_tiles,\
-                                                           next_human_tiles,\
-                                                           previous_ally_tiles = ally_tiles,\
-                                                           previous_enemy_tiles = enemy_tiles,\
-                                                           layer=layer,\
-                                                           alpha=sub_alpha,\
-                                                           beta=sub_beta,\
-                                                           return_troop_orders=False)
-                        else :
-                            score = self.best_troop_orders(next_faction,\
-                                                           next_enemy_tiles,\
-                                                           next_ally_tiles,\
-                                                           next_human_tiles,\
-                                                           previous_ally_tiles = enemy_tiles,\
-                                                           previous_enemy_tiles = ally_tiles,\
-                                                           layer=layer,\
-                                                           alpha=sub_alpha,\
-                                                           beta=sub_beta,\
-                                                           return_troop_orders=False)
+                        enemy_poss_is_interesting = self.check_interesting_possibility(enemy_poss, enemy_tiles, ally_tiles, human_tiles)
+                        if not(enemy_poss_is_interesting):
+                            score = inf if faction==self.faction else -inf
+                        else:
+                            #Given the targets for each ally and enemy, the function below computes the future turns until
+                            #two or more tiles interact. It returns the resulting board situation.
+                            next_faction, next_ally_tiles, next_enemy_tiles, next_human_tiles = self.compute_next_state_board(poss,\
+                                                                                                                              enemy_poss,\
+                                                                                                                              faction,\
+                                                                                                                              ally_tiles,\
+                                                                                                                              enemy_tiles,\
+                                                                                                                              human_tiles) 
+                            #Depending on who is to play next, we call the recursive function with the correct arguments.
+                            if next_faction == faction:
+                                score = self.best_troop_orders(next_faction,\
+                                                               next_ally_tiles,\
+                                                               next_enemy_tiles,\
+                                                               next_human_tiles,\
+                                                               previous_ally_tiles = ally_tiles,\
+                                                               previous_enemy_tiles = enemy_tiles,\
+                                                               layer=layer,\
+                                                               alpha=sub_alpha,\
+                                                               beta=sub_beta,\
+                                                               return_troop_orders=False,\
+                                                               start_time=start_time)
+                            else :
+                                score = self.best_troop_orders(next_faction,\
+                                                               next_enemy_tiles,\
+                                                               next_ally_tiles,\
+                                                               next_human_tiles,\
+                                                               previous_ally_tiles = enemy_tiles,\
+                                                               previous_enemy_tiles = ally_tiles,\
+                                                               layer=layer,\
+                                                               alpha=sub_alpha,\
+                                                               beta=sub_beta,\
+                                                               return_troop_orders=False,\
+                                                               start_time=start_time)
                         #In the inner loop, the score is minimized if the function has been called on the ally's turn because
                         #we are looping through the enemy's possibilities. It is maximized otherwise for the symetrical reason.
                         if faction == self.faction:
@@ -345,6 +362,8 @@ class GameClient():
             if not(return_troop_orders):
                 return max(score_per_possibility) if faction == self.faction else min(score_per_possibility)
             else:
+                '''for i in range(len(possibilities)):
+                    print('possibilité et score : {} := {}'.format(possibilities[i],score_per_possibility[i]))'''
                 #This is executed only for the initial call of the function
                 #The best case scenario is the possibility with the highest score
                 best_case_scenario = possibilities[score_per_possibility.index(max(score_per_possibility))]
@@ -398,8 +417,7 @@ class GameClient():
                 else:
                     turn, new_enemy_tiles, new_ally_tiles, new_human_tiles, conflict_occured = \
                         self.steps_until_new_state(enemy_poss, turn, new_enemy_tiles, new_ally_tiles, new_human_tiles)
-        next_faction = "VAMP" if turn=="WERE" else "WERE"
-        return next_faction, new_ally_tiles, new_enemy_tiles, new_human_tiles
+        return turn, new_ally_tiles, new_enemy_tiles, new_human_tiles
 
 
     def steps_until_new_state(self, poss, turn, ally_tiles, enemy_tiles, human_tiles, conflict_occured=False):
@@ -423,7 +441,6 @@ class GameClient():
         new_enemy_tiles = [t for t in enemy_tiles]
         new_human_tiles = [t for t in human_tiles]
         new_ally_tiles = [t for t in temporary_new_ally_tiles]
-        fusioned_allies = []
         fusioned_allies_dict = {}
         for ally in new_ally_tiles:
             try:
