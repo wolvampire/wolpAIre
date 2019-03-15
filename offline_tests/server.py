@@ -37,8 +37,7 @@ class GameServer():
         self.__board[3][10]=board_tile(3,10,4,"HUM")
         self.__board[11][18]=board_tile(11,18,4,"HUM")
         self.__board[8][14]=board_tile(8,14,20,"HUM")
-        
-        
+
         self.p1.new_game("VAMP", self.__n, self.__m)
         self.p2.new_game("WERE", self.__n, self.__m)
         
@@ -160,9 +159,10 @@ class GameServer():
 if __name__ == "__main__":
 
     nb_games = int(sys.argv[1]) if len(sys.argv)>1 else 100
+    
+    p2 = GameClient("greed")
+    p1 = GameClient("oracle")
 
-    p1 = GameClient("greed")
-    p2 = GameClient("roxxor")
     g = GameServer(p1,p2)
     # g.load_game()
     g.new_game()

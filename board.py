@@ -31,8 +31,8 @@ class Board():
         for row in self.__board:
             for tile in row:
                 if tile.faction != Faction.EMPT:
-                    tiles_of_interest[tile.faction] += [tile]
-                    tiles_of_interest[tile.relation] += [tile]
+                    tiles_of_interest[tile.faction] += [tile.copy()]
+                    tiles_of_interest[tile.relation] += [tile.copy()]
         return tiles_of_interest
 
     def __str__(self):

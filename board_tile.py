@@ -19,7 +19,7 @@ class BoardTile():
     def __init__(self, x, y, nb=0, faction=Faction.EMPT):
         self.__x = x
         self.__y = y
-        self.nb=0
+        self.nb = nb
         self.faction=faction
         self.id = (x,y)
 
@@ -45,6 +45,9 @@ class BoardTile():
     def __copy__(self):
         return BoardTile(self.__x, self.__y, self.nb, self.faction)
 
+    def copy(self):
+        return BoardTile(self.__x, self.__y, self.nb, self.faction)
+
     def __str__(self):
         if self.faction == Faction.EMPT:
             return "__"
@@ -53,6 +56,9 @@ class BoardTile():
 
     def __repr__(self):
         return self.__str__()
+
+    def string_all(self):
+        return "BoardTile : ({}-{}), nb = {}, faction = {}".format(self.__x, self.__y, self.nb, self.faction)
 
     def distance(tile1, tile2):
         return max(abs(tile1.x-tile2.x), abs(tile1.y-tile2.y))
