@@ -329,7 +329,7 @@ class OracleDecider(Decider):
                             vector[j] = ally.nb // 2
                             enumeration.append(vector)
         elif seperation_per_troop == 1:
-            for i in range(len(targets)):
+            for i in range(1,len(targets)):
                 vector = [0] * len(targets)
                 vector[i] = ally.nb
                 enumeration.append(vector)
