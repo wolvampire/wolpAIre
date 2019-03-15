@@ -7,7 +7,7 @@ class OracleDecider(Decider):
     def __init__(self):
         self._name = "THE ORACLE"
         self.coefs = [1, 1, 1, 1]
-        self.depth_max = 10  # max depth when exploring the tree of possibilities
+        self.depth_max = 3  # max depth when exploring the tree of possibilities
 
     def _decide(self, board):
         """
@@ -24,8 +24,10 @@ class OracleDecider(Decider):
         our_tiles = board.get_tiles_of_interest()[Relation.ALLY]
         enemy_tiles = board.get_tiles_of_interest()[Relation.ENEMY]
         human_tiles = board.get_tiles_of_interest()[Faction.HUM]
-        
-        self.depth_max = self.set_max_depth(board, len(human_tiles))
+        human_tiles = sorted(human_tiles, key=lambda tile: self.compute_distance(tile,our_tiles[0]), reverse=False)
+        human_tiles = human_tiles[:6]     
+
+        #self.depth_max = self.set_max_depth(board, len(human_tiles))
 
         if len(our_tiles) == 0:
             return []
@@ -100,8 +102,6 @@ class OracleDecider(Decider):
                 # checks the usefulness of a possibility so that the algorithm doesn't look for useless subtrees
                 poss_is_interesting = self.check_interesting_possibility(poss, ally_tiles, enemy_tiles, human_tiles)
                 if not (poss_is_interesting):
-                    if layer == 2:
-                        print('not interesting {}'.format(i))
                     score_per_possibility[i] = -float('inf') if faction == BoardTile.ally_faction else float('inf')
                 else:
                     for enemy_poss in enemy_possibilities:
@@ -152,8 +152,6 @@ class OracleDecider(Decider):
                             break
                     # In the outer loop, the score is maximized if the function has been called on the ally's turn because
                     # we are looping through the ally's possibilities. It is maximized otherwise for the symetrical reason.
-                    if layer == 2:
-                        print('interesting {}'.format(minmax_score))
                     score_per_possibility[i] = minmax_score
                     if faction == BoardTile.ally_faction:
                         ally_node_value = max(ally_node_value, minmax_score)
@@ -283,7 +281,7 @@ class OracleDecider(Decider):
                     new_ally_tiles.remove(ally)
                     new_human_tiles.remove(human)
                     conflict_occured = True
-                    if ally.nb > human.nb:
+                    if ally.nb >= human.nb:
                         new_ally_tiles.append(BoardTile(ally.x, ally.y, nb=ally.nb + human.nb, faction=turn))
                     else:
                         new_human_tiles.append(BoardTile(human.x, human.y, nb=human.nb, faction=Faction.HUM))
@@ -342,7 +340,7 @@ class OracleDecider(Decider):
         for (i, ally) in enumerate(ally_tiles):
             for (j, target) in enumerate(ally_tiles + enemy_tiles + human_tiles):
                 if poss[i][j] != 0:
-                    if j >= len(ally_tiles) and poss[i][j] <= target.nb:
+                    if j >= len(ally_tiles) and poss[i][j] < target.nb:
                         return False
         # Check that not all the allies target each other
         poss_matrix = np.array(poss)
@@ -392,12 +390,12 @@ class OracleDecider(Decider):
         score = 0
         for human in human_tiles:
             try:
-                closest_ally = min([self.compute_distance(human, ally) for ally in ally_tiles if ally.nb > human.nb])
+                closest_ally = min([self.compute_distance(human, ally) for ally in ally_tiles if ally.nb >= human.nb])
             except:
                 closest_ally = inf
             try:
                 closest_enemy = min(
-                    [self.compute_distance(human, enemy) for enemy in enemy_tiles if enemy.nb > human.nb])
+                    [self.compute_distance(human, enemy) for enemy in enemy_tiles if enemy.nb >= human.nb])
             except:
                 closest_enemy = float('inf')
             if closest_ally == closest_enemy:
@@ -411,12 +409,12 @@ class OracleDecider(Decider):
                 humans_next_to_enemies.append(human.nb)
         try:
             score += eating_humans_coef * max(
-                [s for s in self.enumerate_sub_sums(humans_next_to_allies) if s < sum([a.nb for a in ally_tiles])])
+                [s for s in self.enumerate_sub_sums(humans_next_to_allies) if s <= sum([a.nb for a in ally_tiles])])
         except:
             pass
         try:
             score -= eating_humans_coef * max(
-                [s for s in self.enumerate_sub_sums(humans_next_to_enemies) if s < sum([e.nb for e in enemy_tiles])])
+                [s for s in self.enumerate_sub_sums(humans_next_to_enemies) if s <= sum([e.nb for e in enemy_tiles])])
         except:
             pass
         score += faction_diff_coef * (sum([a.nb for a in ally_tiles]) - sum([e.nb for e in enemy_tiles]))

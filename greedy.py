@@ -30,7 +30,7 @@ class GreedyDecider(Decider):
         for tile in human_tiles:
             dist = BoardTile.distance(tile, our_tile)
             # It needs to be closer and killable
-            if dist < min_dist and tile.nb < nb:
+            if dist < min_dist and tile.nb <= nb:
                 target_found = True
                 min_dist = dist
                 target_x, target_y = (tile.x, tile.y)
