@@ -1,5 +1,5 @@
 from board_tile import BoardTile
-from math import inf, ceil
+from math import ceil
 from decider import *
 
 
@@ -24,8 +24,6 @@ class OracleDecider(Decider):
         our_tiles = board.get_tiles_of_interest()[Relation.ALLY]
         enemy_tiles = board.get_tiles_of_interest()[Relation.ENEMY]
         human_tiles = board.get_tiles_of_interest()[Faction.HUM]
-        human_tiles = sorted(human_tiles, key=lambda tile: self.compute_distance(tile,our_tiles[0]), reverse=False)
-        human_tiles = human_tiles[:6]     
 
         #self.depth_max = self.set_max_depth(board, len(human_tiles))
 
@@ -47,6 +45,7 @@ class OracleDecider(Decider):
             print("Troop orders : no human !")
             our_mvts = []
             if len(our_tiles) > 1:
+                # If we have several tiles, the tiles with fewer troops go to the one with the more troops
                 our_tiles = sorted(our_tiles, key=lambda tile: tile.nb, reverse=True)
                 biggest_ally = our_tiles[0]
                 for ally in our_tiles[1:]:
@@ -54,6 +53,7 @@ class OracleDecider(Decider):
                     our_mvts.append([ally.x, ally.y, ally.nb, ally.x + dir_x, ally.y + dir_y])
                 return our_mvts
             else:
+                # If we have only one tile, it targets the weaker enemy
                 enemy_tiles = sorted(enemy_tiles, key=lambda tile: tile.nb)
                 smallest_enemy = enemy_tiles[0]
                 ally = our_tiles[0]
@@ -85,8 +85,7 @@ class OracleDecider(Decider):
             enemy_possibilities = self.compute_all_possibilities(enemy_tiles, enemy_tiles + ally_tiles + human_tiles,
                                                                  seperation_per_troop=1)
             # initializing the list of score for the possibilities and the node value for the alpha-beta optimization
-            score_per_possibility = [-float('inf') if faction == BoardTile.ally_faction else float('inf')] * len(
-                possibilities)
+            score_per_possibility = [-float('inf') if faction == BoardTile.ally_faction else float('inf')] * len(possibilities)
             ally_node_value = -float('inf') if faction == BoardTile.ally_faction else float('inf')
             for (i, poss) in enumerate(possibilities):
                 # Since we loop among the enemy possibilities for each ally possibility, we have to adapt the alpha-beta algorithm
@@ -108,12 +107,12 @@ class OracleDecider(Decider):
                         # Given the targets for each ally and enemy, the function below computes the future turns until
                         # two or more tiles interact. It returns the resulting board situation.
                         next_faction, next_ally_tiles, next_enemy_tiles, next_human_tiles = self.compute_next_state_board(
-                            poss, \
-                            enemy_poss, \
-                            faction, \
-                            ally_tiles, \
-                            enemy_tiles, \
-                            human_tiles)
+                                                                                                poss, \
+                                                                                                enemy_poss, \
+                                                                                                faction, \
+                                                                                                ally_tiles, \
+                                                                                                enemy_tiles, \
+                                                                                                human_tiles)
                         # Depending on who is to play next, we call the recursive function with the correct arguments.
                         if next_faction == faction:
                             score = self.best_troop_orders(next_faction, \
@@ -180,6 +179,10 @@ class OracleDecider(Decider):
                     max(score_per_possibility) if faction == BoardTile.ally_faction else min(score_per_possibility))
 
     def compute_next_state_board(self, poss, enemy_poss, faction, ally_tiles, enemy_tiles, human_tiles):
+        '''
+        Given an ally and an enemy targeting matrices (poss and enemy_poss), this function calculates all the future turns until
+        a conflit between two tiles occurs (combat or troops fusionning). Then it calculates the resulting board and returns it.
+        '''
         turn = faction
         conflict_occured = False
         new_ally_tiles = ally_tiles[:]
@@ -187,37 +190,31 @@ class OracleDecider(Decider):
         new_human_tiles = human_tiles[:]
         splits_per_ally = list(np.count_nonzero(poss, axis=1))
         splits_per_enemy = list(np.count_nonzero(enemy_poss, axis=1))
-        if splits_per_ally != list(
-                np.ones((len(ally_tiles),), dtype=int)) and faction == BoardTile.ally_faction:  # check split
-            for (i, ally) in enumerate(ally_tiles):
-                new_ally_tiles.remove(ally)
-                for (j, target) in enumerate(ally_tiles + enemy_tiles + human_tiles):
-                    if poss[i][j] != 0:
-                        dir_x, dir_y = self.compute_steps(ally.x, ally.y, target.x, target.y)
-                        new_ally_tiles.append(BoardTile(ally.x + dir_x, ally.y + dir_y, nb=poss[i][j], faction=faction))
-            new_ally_tiles, new_enemy_tiles, new_human_tiles, conflict_occured = self.check_conflict_and_compute_battle(
-                new_ally_tiles, \
-                new_enemy_tiles, \
-                new_human_tiles, \
-                len(ally_tiles), \
-                faction, \
-                conflict_occured)
+        if splits_per_ally != list(np.ones((len(ally_tiles),), dtype=int)) and faction == BoardTile.ally_faction:
+            # check if the ally targeting matrix has a splitting order
+            new_ally_tiles, new_enemy_tiles, new_human_tiles, conflict_occured = self.compute_board_after_plit(
+                                                                                        poss,
+                                                                                        ally_tiles,
+                                                                                        ally_tiles + enemy_tiles + human_tiles,
+                                                                                        new_ally_tiles,
+                                                                                        new_enemy_tiles,
+                                                                                        new_human_tiles,
+                                                                                        faction,
+                                                                                        conflict_occured)
         elif splits_per_enemy != list(np.ones((len(enemy_tiles),), dtype=int)) and faction != BoardTile.ally_faction:
-            for (i, enemy) in enumerate(enemy_tiles):
-                new_enemy_tiles.remove(enemy)
-                for (j, target) in enumerate(enemy_tiles + ally_tiles + human_tiles):
-                    if enemy_poss[i][j] != 0:
-                        dir_x, dir_y = self.compute_steps(enemy.x, enemy.y, target.x, target.y)
-                        new_enemy_tiles.append(
-                            BoardTile(enemy.x + dir_x, enemy.y + dir_y, nb=enemy_poss[i][j], faction=faction))
-            new_enemy_tiles, new_ally_tiles, new_human_tiles, conflict_occured = self.check_conflict_and_compute_battle(
-                new_enemy_tiles, \
-                new_ally_tiles, \
-                new_human_tiles, \
-                len(enemy_tiles), \
-                faction, \
-                conflict_occured)
+            # check if the enemy targeting matrix has a splitting order
+            new_enemy_tiles, new_ally_tiles, new_human_tiles, conflict_occured = self.compute_board_after_plit(
+                                                                                        enemy_poss,
+                                                                                        enemy_tiles,
+                                                                                        enemy_tiles + ally_tiles + human_tiles,
+                                                                                        new_enemy_tiles,
+                                                                                        new_ally_tiles,
+                                                                                        new_human_tiles,
+                                                                                        faction,
+                                                                                        conflict_occured)
         else:
+            # while there is no tile conflict (combat or troop gathering), we compute that gets the players closer to their targets
+            # until inevitably encountering other tiles, causing the exit of the loop
             while not (conflict_occured):
                 if turn == faction:
                     turn, new_ally_tiles, new_enemy_tiles, new_human_tiles, conflict_occured = \
@@ -227,6 +224,21 @@ class OracleDecider(Decider):
                         self.steps_until_new_state(enemy_poss, turn, new_enemy_tiles, new_ally_tiles, new_human_tiles)
         return turn, new_ally_tiles, new_enemy_tiles, new_human_tiles
 
+    def compute_board_after_plit(self,poss,ally_tiles,target_tiles,new_ally_tiles,
+                                 new_enemy_tiles,new_human_tiles,faction,conflict_occured):
+        for (i, ally) in enumerate(ally_tiles):
+                new_ally_tiles.remove(ally)
+                for (j, target) in enumerate(target_tiles):
+                    if poss[i][j] != 0:
+                        dir_x, dir_y = self.compute_steps(ally.x, ally.y, target.x, target.y)
+                        new_ally_tiles.append(BoardTile(ally.x + dir_x, ally.y + dir_y, nb=poss[i][j], faction=faction))
+        return self.check_conflict_and_compute_battle(new_ally_tiles, \
+                                                        new_enemy_tiles, \
+                                                        new_human_tiles, \
+                                                        len(ally_tiles), \
+                                                        faction, \
+                                                        conflict_occured)
+
     def steps_until_new_state(self, poss, turn, ally_tiles, enemy_tiles, human_tiles, conflict_occured=False):
         next_turn = Faction.VAMP if turn == Faction.WERE else Faction.WERE
         temporary_new_ally_tiles = []
@@ -234,15 +246,14 @@ class OracleDecider(Decider):
             for (j, target) in enumerate(ally_tiles + enemy_tiles + human_tiles):
                 if poss[i][j] != 0:
                     dir_x, dir_y = self.compute_steps(ally.x, ally.y, target.x, target.y)
-                    temporary_new_ally_tiles.append(
-                        BoardTile(ally.x + dir_x, ally.y + dir_y, nb=poss[i][j], faction=turn))
+                    temporary_new_ally_tiles.append(BoardTile(ally.x + dir_x, ally.y + dir_y, nb=poss[i][j], faction=turn))
         new_ally_tiles, new_enemy_tiles, new_human_tiles, conflict_occured = self.check_conflict_and_compute_battle(
-            temporary_new_ally_tiles, \
-            enemy_tiles, \
-            human_tiles, \
-            len(ally_tiles), \
-            turn, \
-            conflict_occured)
+                                                                                    temporary_new_ally_tiles,\
+                                                                                    enemy_tiles,\
+                                                                                    human_tiles,\
+                                                                                    len(ally_tiles),\
+                                                                                    turn,\
+                                                                                    conflict_occured)
         return next_turn, new_ally_tiles, new_enemy_tiles, new_human_tiles, conflict_occured
 
     def check_conflict_and_compute_battle(self, temporary_new_ally_tiles, enemy_tiles, human_tiles,
@@ -251,6 +262,7 @@ class OracleDecider(Decider):
         new_human_tiles = human_tiles[:]
         new_ally_tiles = temporary_new_ally_tiles[:]
         fusioned_allies_dict = {}
+        # compute the resulting ally list after troop gathering (same list if no troop gathering)
         for ally in new_ally_tiles:
             try:
                 fusioned_allies_dict['{};{}'.format(ally.x, ally.y)] += ally.nb
@@ -260,11 +272,15 @@ class OracleDecider(Decider):
         for key in fusioned_allies_dict.keys():
             temporary_new_ally_tiles.append(
                 BoardTile(int(key.split(';')[0]), int(key.split(';')[1]), nb=fusioned_allies_dict[key], faction=turn))
+        # check if troops gathered
         if len(temporary_new_ally_tiles) < len(new_ally_tiles):
             conflict_occured = True
+        # check if troops splitted
         if len(new_ally_tiles) != n_allies_previous_turn:
             conflict_occured = True
+
         new_ally_tiles = temporary_new_ally_tiles[:]
+        # check if there are conflicts with enemy tiles and human tiles
         for ally in temporary_new_ally_tiles:
             for enemy in enemy_tiles:
                 if ally.x == enemy.x and ally.y == enemy.y:
@@ -289,6 +305,22 @@ class OracleDecider(Decider):
         return new_ally_tiles, new_enemy_tiles, new_human_tiles, conflict_occured
 
     def compute_all_possibilities(self, ally_tiles, target_tiles, seperation_per_troop=2):
+        '''
+        returns a list of matrices with each one of them represents the targeting orders for the ally tiles.
+        there are as many line as the number of ally tiles and as many columns as the number of target tiles (allies, enemies and humans).
+        the value v on indexes i,j means that the ally of index i sends v units to the target at index j
+        exemple :
+        ally_tiles : [5V,1V]
+        enemy_tiles : [4L,1L]
+        human_tiles : [1H,6H,3H]
+        and thus a target_tiles as follow : [5V,1V,4L,1L,1H,6H,3H]
+        one of the matrices in the list of matrices returned by this function may be:
+        [[0,0,0,2,0,0,3],
+         [0,0,0,0,1,0,0]]
+        this means that  : ally 1 targets the target 4 (enemy 2) with 2 units
+                           ally 1 targets the target 7 (human 3) with 3 units
+                           ally 2 targets the target 5 (human 1) with 1 units
+        '''
         if len(ally_tiles) == 1:
             possibilities = []
             orders_for_one_tile = self.compute_orders_for_one_tile(ally_tiles[0], target_tiles, seperation_per_troop)
@@ -335,6 +367,9 @@ class OracleDecider(Decider):
 
     def check_interesting_possibility(self, poss, ally_tiles, enemy_tiles, human_tiles):
         ''' Return True if the given possibility is an interesting one
+            Are considered not interesting the following situations :
+            - possibility where an ally is targeting a target with more units
+            - possibility where none of the enemies and humans are targeted
         '''
         # Check that the targets are indeed outnumbered
         for (i, ally) in enumerate(ally_tiles):
@@ -358,6 +393,8 @@ class OracleDecider(Decider):
         return dir_x, dir_y
 
     def set_max_depth(self, board, n_human):
+        # This function returns the maximum depth that can be searched within the time limit of 2 seconds.
+        # It is based on empirical tests.
         # below : lines represent square boards with size [2,4,6,8,10]
         #         columns represent boards with number of human tiles [3,6,9,12,15]
         depths_per_board_situation = np.array([[8., 8., 8., 8., 8.],\
@@ -376,15 +413,18 @@ class OracleDecider(Decider):
         
 
     def heuristic(self, ally_tiles, enemy_tiles, human_tiles, faction, previous_ally_tiles, previous_enemy_tiles):
+        '''
+        Given a board situation, this heuristic takes into account :
+        - the number of humans that can be eaten on this board situation
+        - the actual units difference between ally and enemy
+        - the ally and enemy units difference with the past turn
+        - how much the enemy and ally tiles are dispached into several tiles
+        '''
         eating_humans_coef = self.coefs[0]
         faction_diff_coef = self.coefs[1]
         turn_differential_coef = self.coefs[2]
         split_coef = self.coefs[3]
-        # Case where the enemy has been slain
-        '''if len(enemy_tiles) == 0:
-            return float('inf')
-        elif len(ally_tiles) == 0:
-            return -float('inf')'''
+
         humans_next_to_allies = []
         humans_next_to_enemies = []
         score = 0

@@ -131,8 +131,8 @@ if __name__ == '__main__':
         game_client.give_decider(oracle.OracleDecider())
     else:
         print("Invalid algorithm {}, aborting.".format(sys.argv[1]))
-    address = "138.195.199.147"
-    port = 5555
+    address = "127.0.0.1"
+    port = 6666
     if len(sys.argv) >= 4:
         address = sys.argv[2]
         port = int(sys.argv[3])
