@@ -1,2 +1,2 @@
 # wolpAIre
-School Project - IA for a strategy game between Werewolves and Vampires
+School Project - Creating an AI for a turn based strategy game opposing werewolves and vampires.
